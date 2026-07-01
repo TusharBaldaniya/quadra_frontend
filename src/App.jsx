@@ -12,14 +12,13 @@ import Snackbar from "./component/Snackbar";
 import { cacheTasks, getCachedTasks, enqueueMutation, flushQueue, onOnline } from "./services/offline";
 
 export default function App() {
-  const [deferredPrompt, setDeferredPrompt] = useState(null);
-  const [isIOS, setIsIOS] = useState(false);
+  // const [deferredPrompt, setDeferredPrompt] = useState(null);
+  // const [isIOS, setIsIOS] = useState(false);
   // const [isStandalone, setIsStandalone] = useState(false);
   const [showInstallInstructions, setShowInstallInstructions] = useState(false);
   const [alerts, setAlerts] = useState([]);
 
   // Core app state (declared early so effects can reference them)
-  const [user, setUser] = useState("John Doe");
   const [tasks, setTasks] = useState({ q1: [], q2: [], q3: [], q4: [] });
   const [showModal, setShowModal] = useState(false);
   const [showWelcome, setShowWelcome] = useState(true);
@@ -71,7 +70,7 @@ export default function App() {
   useEffect(() => {
     // Detect iOS devices
     const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    setIsIOS(iOS);
+    // setIsIOS(iOS);
     
     // Check if app is already installed (standalone mode)
     // const standalone = window.matchMedia('(display-mode: standalone)').matches || 
@@ -84,7 +83,7 @@ export default function App() {
       addAlert("🎉 PWA install prompt is available!", 'success');
       console.log("PWA install prompt triggered");
       e.preventDefault();
-      setDeferredPrompt(e);
+      // setDeferredPrompt(e);
     };
     
     window.addEventListener("beforeinstallprompt", handler);
@@ -168,6 +167,7 @@ export default function App() {
         addAlert(`❌ Failed to load tasks: ${e.message}`, 'error');
       }
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Lock background scroll when any modal is open (placed after state declarations)

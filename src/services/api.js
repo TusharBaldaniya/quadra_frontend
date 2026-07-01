@@ -1,4 +1,4 @@
-const BASE_URL = process.env.REACT_APP_API_BASE || 'http://192.168.1.11:4000';
+const BASE_URL = process.env.REACT_APP_API_BASE || 'https://quadra-production-1943.up.railway.app';
 
 async function request(path, options = {}) {
   const res = await fetch(`${BASE_URL}${path}`, {

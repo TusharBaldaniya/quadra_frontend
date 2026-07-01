@@ -59,7 +59,7 @@ export default function Analytics({ tasksByQuadrant, theme = "light", weeklyGoal
       if (t.due && t.status !== "completed" && new Date(t.due) < now) overdue += 1;
     }
     return { total, completed, overdue };
-  }, [allTasks]);
+  }, [allTasks, serverSummary]);
 
   // Completion trend (last 14/30 days)
   const completionTrend = useMemo(() => {
