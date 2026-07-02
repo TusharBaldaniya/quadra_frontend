@@ -51,7 +51,7 @@ const quadrantConfig = {
   },
 };
 
-export default function TaskBoard({ tasks, setTasks, onEdit, onDelete, onComplete, theme = 'light' }) {
+export default function TaskBoard({ tasks, setTasks, onEdit, onDelete, onComplete, onMoveTask, theme = 'light' }) {
   const isDark = theme === 'dark';
   const [filter, setFilter] = useState('All'); // All | Today | High
   const [compact, setCompact] = useState(true);
@@ -184,20 +184,13 @@ export default function TaskBoard({ tasks, setTasks, onEdit, onDelete, onComplet
       return;
     }
 
-    const sourceTasks = [...(tasks[source.droppableId] || [])];
-    const destTasks = [...(tasks[destination.droppableId] || [])];
+    const sourceTasks = tasks[source.droppableId] || [];
+    const moved = sourceTasks[source.index];
+    if (!moved) return;
 
-    // Remove from source
-    const [moved] = sourceTasks.splice(source.index, 1);
-
-    // Add to destination
-    destTasks.splice(destination.index, 0, moved);
-
-    setTasks({
-      ...tasks,
-      [source.droppableId]: sourceTasks,
-      [destination.droppableId]: destTasks,
-    });
+    if (typeof onMoveTask === 'function') {
+      onMoveTask(moved, source.droppableId, destination.droppableId, destination.index);
+    }
   };
 
   return (
@@ -316,6 +309,7 @@ export default function TaskBoard({ tasks, setTasks, onEdit, onDelete, onComplet
                               onEdit={onEdit}
                               onDelete={onDelete}
                               onComplete={onComplete}
+                              onMove={onMoveTask}
                               theme={theme}
                               compact={compact}
                             />

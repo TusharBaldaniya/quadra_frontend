@@ -433,6 +433,62 @@ export default function App() {
     }
   };
 
+  const handleMoveTask = async (task, fromQuadrant, toQuadrant, newIndex) => {
+    // 1. Optimistic local update
+    let movedTask = null;
+    setTasks((prev) => {
+      const next = { ...prev };
+      if (!next[fromQuadrant]) return prev;
+      const idx = next[fromQuadrant].findIndex((t) => t.id === task.id);
+      if (idx === -1) return prev;
+      
+      [movedTask] = next[fromQuadrant].splice(idx, 1);
+      if (movedTask) {
+        movedTask.quadrant = toQuadrant;
+        if (!next[toQuadrant]) next[toQuadrant] = [];
+        if (typeof newIndex === 'number') {
+          next[toQuadrant].splice(newIndex, 0, movedTask);
+        } else {
+          next[toQuadrant].push(movedTask);
+        }
+      }
+      cacheTasks(next);
+      return next;
+    });
+
+    // 2. Persist to backend
+    try {
+      const payload = {
+        title: task.title,
+        description: task.description || undefined,
+        priority: task.priority,
+        quadrant: toQuadrant,
+        dueDate: task.due ? new Date(task.due).toISOString() : undefined,
+        estimatedTime: task.estimated ?? undefined,
+        tags: task.tags || [],
+      };
+      await api.updateTask(task.id, payload);
+    } catch (err) {
+      addAlert(`❌ Failed to sync move: ${err.message}`, 'error');
+      
+      enqueueMutation({
+        type: 'update',
+        id: task.id,
+        data: {
+          title: task.title,
+          description: task.description || undefined,
+          priority: task.priority,
+          quadrant: toQuadrant,
+          dueDate: task.due ? new Date(task.due).toISOString() : undefined,
+          estimatedTime: task.estimated ?? undefined,
+          tags: task.tags || [],
+        }
+      });
+      cacheTasks((prev => prev));
+      addAlert(`📶 Move saved locally — will sync when online`, 'success');
+    }
+  };
+
   const handleComplete = (task, quadrant) => {
     // Commit any previous pending action immediately
     if (undoRef.current.commit) {
@@ -564,7 +620,7 @@ export default function App() {
       <motion.div key={currentTab} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.15 }}>
         {currentTab === 'board' && (
           <div className="pb-2">
-            <TaskBoard theme={theme} tasks={tasks} setTasks={setTasks} onEdit={handleEdit} onDelete={handleDelete} onComplete={handleComplete} />
+            <TaskBoard theme={theme} tasks={tasks} setTasks={setTasks} onEdit={handleEdit} onDelete={handleDelete} onComplete={handleComplete} onMoveTask={handleMoveTask} />
           </div>
         )}
 

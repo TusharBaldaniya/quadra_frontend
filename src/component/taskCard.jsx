@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Draggable } from "@hello-pangea/dnd";
 import { FiClock, FiFlag, FiCheck, FiMoreVertical, FiEdit2, FiTrash2, FiCheckCircle } from "react-icons/fi";
@@ -35,15 +35,38 @@ const quadrantColors = {
   q4: "border-l-green-500",
 };
 
-export default function TaskCard({ task, index, quadrant, onEdit, onDelete, onComplete, theme = 'light', compact = false }) {
+export default function TaskCard({ task, index, quadrant, onEdit, onDelete, onComplete, onMove, theme = 'light', compact = false }) {
   const isDark = theme === 'dark';
   const [isHovered, setIsHovered] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [showQuadrantMenu, setShowQuadrantMenu] = useState(false);
   const [menuPlacement, setMenuPlacement] = useState('below'); // 'below' | 'above'
   const menuAnchorRef = useRef(null);
+  const quadMenuAnchorRef = useRef(null);
   const startXRef = useRef(0);
   const [dx, setDx] = useState(0);
   const [swiping, setSwiping] = useState(false);
+
+  useEffect(() => {
+    if (!showMenu && !showQuadrantMenu) return;
+
+    const handleOutsideClick = (e) => {
+      if (showMenu && menuAnchorRef.current && !menuAnchorRef.current.contains(e.target)) {
+        setShowMenu(false);
+      }
+      if (showQuadrantMenu && quadMenuAnchorRef.current && !quadMenuAnchorRef.current.contains(e.target)) {
+        setShowQuadrantMenu(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    document.addEventListener("touchstart", handleOutsideClick);
+    
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+      document.removeEventListener("touchstart", handleOutsideClick);
+    };
+  }, [showMenu, showQuadrantMenu]);
   
   const isDueToday = task.due && new Date(task.due).toDateString() === new Date().toDateString();
   const priority = priorityConfig[task.priority] || priorityConfig.Medium;
@@ -71,7 +94,9 @@ export default function TaskCard({ task, index, quadrant, onEdit, onDelete, onCo
           ref={provided.innerRef}
           {...provided.draggableProps}
           style={provided.draggableProps.style}
-          className="relative rounded-2xl overflow-hidden"
+          className={`relative rounded-2xl ${
+            showMenu || showQuadrantMenu ? 'overflow-visible z-30' : 'overflow-hidden'
+          }`}
         >
           <div
             className="absolute inset-0 flex items-center justify-between px-4 pointer-events-none"
@@ -109,13 +134,18 @@ export default function TaskCard({ task, index, quadrant, onEdit, onDelete, onCo
             className={`group relative ${compact ? 'p-2.5 sm:p-3 pl-10 sm:pl-12' : 'p-3 sm:p-4 pl-12 sm:pl-14'} rounded-2xl ${isDark ? 'bg-slate-800 text-slate-100' : 'bg-white'} shadow-lg border-l-4 overflow-visible ${
               snapshot.isDragging 
                 ? "shadow-2xl z-50" 
-                : "hover:shadow-xl transition-shadow duration-200"
+                : (showMenu || showQuadrantMenu)
+                ? "shadow-xl z-30 ring-2 ring-blue-100/50 dark:ring-blue-900/30" 
+                : "hover:shadow-xl transition-shadow duration-200 z-10"
             } ${quadrantColors[quadrant]} border ${isDark ? 'border-slate-700' : 'border-gray-100'}`}
             style={{ transform: `translateX(${dx}px)`, transition: swiping ? 'none' : 'transform 160ms ease-out' }}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => {
               setIsHovered(false);
-              setTimeout(() => !showMenu && setShowMenu(false), 200);
+              setTimeout(() => {
+                if (!showMenu) setShowMenu(false);
+                if (!showQuadrantMenu) setShowQuadrantMenu(false);
+              }, 200);
             }}
             onClick={(e) => {
               if (Math.abs(dx) > 5) return;
@@ -202,25 +232,95 @@ export default function TaskCard({ task, index, quadrant, onEdit, onDelete, onCo
                 </div>
               </div>
 
-              {/* Action Menu Button */}
-              <div className="relative action-menu" ref={menuAnchorRef}>
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    // Decide whether to open above or below based on viewport space
-                    try {
-                      const rect = menuAnchorRef.current?.getBoundingClientRect();
-                      if (rect) {
-                        const spaceBelow = window.innerHeight - rect.bottom;
-                        setMenuPlacement(spaceBelow < 200 ? 'above' : 'below');
-                      }
-                    } catch {}
-                    setShowMenu((v) => !v);
-                  }}
-                  className="p-3 rounded-full hover:bg-gray-100 transition-colors text-gray-600"
-                >
-                  <FiMoreVertical className="text-xl sm:text-lg" />
-                </button>
+              {/* Quadrant Quick Switcher & Action Menu wrapper */}
+              <div className="flex items-center gap-1 flex-shrink-0">
+                {/* Quadrant Quick Switcher */}
+                <div className="relative" ref={quadMenuAnchorRef}>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowQuadrantMenu((v) => !v);
+                      setShowMenu(false);
+                    }}
+                    className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg font-bold text-[10px] sm:text-xs flex items-center justify-center border shadow-sm transition-all duration-200 hover:scale-105 active:scale-95 ${
+                      quadrant === 'q1'
+                        ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100 dark:bg-red-950/40 dark:text-red-400 dark:border-red-900/60 dark:hover:bg-red-950/60'
+                        : quadrant === 'q2'
+                        ? 'bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-900/60 dark:hover:bg-blue-950/60'
+                        : quadrant === 'q3'
+                        ? 'bg-yellow-50 text-yellow-600 border-yellow-200 hover:bg-yellow-100 dark:bg-yellow-950/40 dark:text-yellow-400 dark:border-yellow-900/60 dark:hover:bg-yellow-950/60'
+                        : 'bg-green-50 text-green-600 border-green-200 hover:bg-green-100 dark:bg-green-950/40 dark:text-green-400 dark:border-green-900/60 dark:hover:bg-green-950/60'
+                    }`}
+                    title="Move to another quadrant"
+                  >
+                    {quadrant.toUpperCase()}
+                  </button>
+
+                  <AnimatePresence>
+                    {showQuadrantMenu && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                        transition={{ duration: 0.15 }}
+                        className={`absolute right-0 top-full mt-1 w-44 rounded-xl shadow-2xl border z-50 p-1 flex flex-col gap-0.5 ${
+                          isDark 
+                            ? 'bg-slate-900 text-slate-100 border-slate-700' 
+                            : 'bg-white text-gray-800 border-gray-100'
+                        }`}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {[
+                          { id: 'q1', label: 'Q1', desc: 'Urgent & Important', color: 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20' },
+                          { id: 'q2', label: 'Q2', desc: 'Important & Not Urgent', color: 'text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/20' },
+                          { id: 'q3', label: 'Q3', desc: 'Urgent & Not Important', color: 'text-yellow-600 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-950/20' },
+                          { id: 'q4', label: 'Q4', desc: 'Not Urgent & Not Important', color: 'text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-950/20' }
+                        ].map((item) => (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => {
+                              if (item.id !== quadrant && typeof onMove === 'function') {
+                                onMove(task, quadrant, item.id);
+                              }
+                              setShowQuadrantMenu(false);
+                            }}
+                            className={`w-full px-2.5 py-1.5 text-left rounded-lg transition-colors flex flex-col ${item.color} ${
+                              item.id === quadrant 
+                                ? (isDark ? 'bg-slate-800 font-semibold' : 'bg-gray-50 font-semibold') 
+                                : ''
+                            }`}
+                          >
+                            <span className="text-[11px] font-bold">{item.label}</span>
+                            <span className={`text-[9px] font-normal leading-tight ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>{item.desc}</span>
+                          </button>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* Action Menu Button */}
+                <div className="relative action-menu" ref={menuAnchorRef}>
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      // Decide whether to open above or below based on viewport space
+                      try {
+                        const rect = menuAnchorRef.current?.getBoundingClientRect();
+                        if (rect) {
+                          const spaceBelow = window.innerHeight - rect.bottom;
+                          setMenuPlacement(spaceBelow < 200 ? 'above' : 'below');
+                        }
+                      } catch {}
+                      setShowMenu((v) => !v);
+                      setShowQuadrantMenu(false);
+                    }}
+                    className="p-2 sm:p-2.5 rounded-full hover:bg-gray-100 transition-colors text-gray-600"
+                  >
+                    <FiMoreVertical className="text-lg sm:text-base" />
+                  </button>
                 
                 {/* Dropdown Menu */}
                 <AnimatePresence>
@@ -270,6 +370,7 @@ export default function TaskCard({ task, index, quadrant, onEdit, onDelete, onCo
                 </AnimatePresence>
               </div>
             </div>
+          </div>
 
             {/* Meta row (row 2): priority left, due date right */}
             <div className="flex items-center justify-between mb-1">
