@@ -10,8 +10,40 @@ import CompletedList from "./component/CompletedList";
 import Analytics from "./component/Analytics";
 import Snackbar from "./component/Snackbar";
 import { cacheTasks, getCachedTasks, enqueueMutation, flushQueue, onOnline } from "./services/offline";
+import AuthPage from "./component/AuthPage";
+import { FiLogOut } from "react-icons/fi";
 
 export default function App() {
+  const [user, setUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
+
+  const handleLogout = () => {
+    localStorage.removeItem('quadra_auth_token');
+    setUser(null);
+    setTasks({ q1: [], q2: [], q3: [], q4: [] });
+  };
+
+  // Validate session on mount
+  useEffect(() => {
+    (async () => {
+      const token = localStorage.getItem('quadra_auth_token');
+      if (!token) {
+        setUser(null);
+        setAuthLoading(false);
+        return;
+      }
+      try {
+        const data = await api.getMe();
+        setUser(data.user);
+      } catch (err) {
+        localStorage.removeItem('quadra_auth_token');
+        setUser(null);
+      } finally {
+        setAuthLoading(false);
+      }
+    })();
+  }, []);
+
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isIOS, setIsIOS] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
@@ -28,8 +60,9 @@ export default function App() {
   const [currentTab, setCurrentTab] = useState('board');
   const [theme, setTheme] = useState(() => {
     const stored = localStorage.getItem('theme');
-    return stored === 'dark' || stored === 'light' ? stored : 'light';
+    return stored === 'dark' || stored === 'light' ? stored : 'dark';
   }); // 'light' | 'dark'
+  const isDark = theme === 'dark';
   const [weeklyGoal, setWeeklyGoal] = useState(() => {
     const stored = localStorage.getItem('weeklyGoal');
     const num = stored ? parseInt(stored, 10) : 20;
@@ -39,7 +72,7 @@ export default function App() {
   useEffect(() => {
     const bg = theme === 'dark' ? '#0f172a' : '#f8fafc';
 
-    try { localStorage.setItem('theme', theme); } catch {}
+    try { localStorage.setItem('theme', theme); } catch { }
 
     document.documentElement.style.setProperty('--app-bg', bg);
     document.documentElement.style.backgroundColor = bg;
@@ -58,7 +91,7 @@ export default function App() {
   const addAlert = (message, type = 'info') => {
     const id = Date.now();
     setAlerts(prev => [...prev, { id, message, type, timestamp: new Date() }]);
-    
+
     // Auto-remove alert after 5 seconds
     setTimeout(() => {
       setAlerts(prev => prev.filter(alert => alert.id !== id));
@@ -71,12 +104,12 @@ export default function App() {
     // Detect iOS devices
     const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     setIsIOS(iOS);
-    
+
     // Check if app is already installed (standalone mode)
-    const standalone = window.matchMedia('(display-mode: standalone)').matches || 
-                     window.navigator.standalone === true;
+    const standalone = window.matchMedia('(display-mode: standalone)').matches ||
+      window.navigator.standalone === true;
     setIsStandalone(standalone);
-    
+
     // No user-facing alert for standalone to reduce noise
 
     const handler = (e) => {
@@ -85,14 +118,14 @@ export default function App() {
       e.preventDefault();
       setDeferredPrompt(e);
     };
-    
+
     window.addEventListener("beforeinstallprompt", handler);
-    
+
     // Check PWA requirements
     const serviceWorkerSupported = 'serviceWorker' in navigator;
     const isHTTPS = window.location.protocol === 'https:';
     const manifestExists = !!document.querySelector('link[rel="manifest"]');
-    
+
     // Show alerts for missing requirements
     if (!serviceWorkerSupported) {
       addAlert("❌ Service Worker not supported", 'error');
@@ -103,7 +136,7 @@ export default function App() {
     if (!manifestExists) {
       addAlert("❌ Manifest not found", 'error');
     }
-    
+
     // Check if all requirements are met
     if (serviceWorkerSupported && isHTTPS && manifestExists) {
       addAlert("✅ All PWA requirements met!", 'success');
@@ -125,11 +158,13 @@ export default function App() {
 
   // Persist weeklyGoal
   useEffect(() => {
-    try { localStorage.setItem('weeklyGoal', String(weeklyGoal)); } catch {}
+    try { localStorage.setItem('weeklyGoal', String(weeklyGoal)); } catch { }
   }, [weeklyGoal]);
 
   // Fetch tasks from backend API on mount (with offline cache seed)
   useEffect(() => {
+    if (!user) return;
+
     (async () => {
       try {
         // Seed from cache first for instant offline start
@@ -158,6 +193,8 @@ export default function App() {
               estimated: t.estimatedTime,
               dependencies: t.dependencyIds || [],
               createdAt: t.createdAt ? new Date(t.createdAt) : undefined,
+              status: t.status,
+              completedAt: t.completedAt ? new Date(t.completedAt) : undefined,
             },
           ];
         }
@@ -168,7 +205,7 @@ export default function App() {
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [user]);
 
   // Lock background scroll when any modal is open (placed after state declarations)
   useEffect(() => {
@@ -189,7 +226,7 @@ export default function App() {
       setShowInstallInstructions(true);
       return;
     }
-    
+
     if (!deferredPrompt) {
       addAlert("Install prompt is not available yet. Please use browser menu.", "info");
       return;
@@ -295,15 +332,17 @@ export default function App() {
         ...prev,
         [safeQuadrant]: [...(prev[safeQuadrant] || []), optimistic],
       }));
-      enqueueMutation({ type: 'create', data: {
-        title: task.title,
-        description: task.description,
-        priority: task.priority,
-        quadrant: safeQuadrant,
-        dueDate: task.due ? new Date(task.due).toISOString() : undefined,
-        estimatedTime: task.estimated ?? undefined,
-        tags: Array.isArray(task.tags) ? task.tags : [],
-      }});
+      enqueueMutation({
+        type: 'create', data: {
+          title: task.title,
+          description: task.description,
+          priority: task.priority,
+          quadrant: safeQuadrant,
+          dueDate: task.due ? new Date(task.due).toISOString() : undefined,
+          estimatedTime: task.estimated ?? undefined,
+          tags: Array.isArray(task.tags) ? task.tags : [],
+        }
+      });
       cacheTasks((prev => prev));
       addAlert(`📶 Saved locally — will sync when online`, 'success');
     }
@@ -415,15 +454,17 @@ export default function App() {
         }
         return next;
       });
-      enqueueMutation({ type: 'update', id: updatedTask.id, data: {
-        title: updatedTask.title,
-        description: updatedTask.description,
-        priority: updatedTask.priority,
-        quadrant: targetQuadrant,
-        dueDate: updatedTask.due ? new Date(updatedTask.due).toISOString() : undefined,
-        estimatedTime: updatedTask.estimated ?? undefined,
-        tags: Array.isArray(updatedTask.tags) ? updatedTask.tags : [],
-      }});
+      enqueueMutation({
+        type: 'update', id: updatedTask.id, data: {
+          title: updatedTask.title,
+          description: updatedTask.description,
+          priority: updatedTask.priority,
+          quadrant: targetQuadrant,
+          dueDate: updatedTask.due ? new Date(updatedTask.due).toISOString() : undefined,
+          estimatedTime: updatedTask.estimated ?? undefined,
+          tags: Array.isArray(updatedTask.tags) ? updatedTask.tags : [],
+        }
+      });
       cacheTasks((prev => prev));
       addAlert(`📶 Changes saved locally — will sync when online`, 'success');
     } finally {
@@ -441,7 +482,7 @@ export default function App() {
       if (!next[fromQuadrant]) return prev;
       const idx = next[fromQuadrant].findIndex((t) => t.id === task.id);
       if (idx === -1) return prev;
-      
+
       [movedTask] = next[fromQuadrant].splice(idx, 1);
       if (movedTask) {
         movedTask.quadrant = toQuadrant;
@@ -470,7 +511,7 @@ export default function App() {
       await api.updateTask(task.id, payload);
     } catch (err) {
       addAlert(`❌ Failed to sync move: ${err.message}`, 'error');
-      
+
       enqueueMutation({
         type: 'update',
         id: task.id,
@@ -492,7 +533,7 @@ export default function App() {
   const handleComplete = (task, quadrant) => {
     // Commit any previous pending action immediately
     if (undoRef.current.commit) {
-      try { undoRef.current.commit(); } catch {}
+      try { undoRef.current.commit(); } catch { }
       if (undoRef.current.timer) clearTimeout(undoRef.current.timer);
       undoRef.current = { timer: null, commit: null, revert: null };
       setSnackbarOpen(false);
@@ -545,7 +586,7 @@ export default function App() {
   const handleDelete = (taskId, quadrant) => {
     // Commit any previous pending action immediately
     if (undoRef.current.commit) {
-      try { undoRef.current.commit(); } catch {}
+      try { undoRef.current.commit(); } catch { }
       if (undoRef.current.timer) clearTimeout(undoRef.current.timer);
       undoRef.current = { timer: null, commit: null, revert: null };
       setSnackbarOpen(false);
@@ -594,6 +635,21 @@ export default function App() {
     undoRef.current = { timer, commit, revert };
   };
 
+  if (authLoading) {
+    return (
+      <div className={`min-h-screen flex items-center justify-center ${theme === 'dark' ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm font-medium animate-pulse">Initializing Quadra...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <AuthPage onAuthSuccess={(u) => setUser(u)} theme={theme} />;
+  }
+
   return (
     <MobileShell
       title="Quadra"
@@ -601,10 +657,10 @@ export default function App() {
         currentTab === 'board'
           ? 'Prioritize your tasks'
           : currentTab === 'analytics'
-          ? 'Insights and progress'
-          : currentTab === 'completed'
-          ? 'Done tasks'
-          : 'Preferences'
+            ? 'Insights and progress'
+            : currentTab === 'completed'
+              ? 'Done tasks'
+              : 'User Profile & Settings'
       }
       currentTab={currentTab}
       onTabChange={setCurrentTab}
@@ -616,6 +672,8 @@ export default function App() {
       deferredPrompt={deferredPrompt}
       onInstallClick={handleInstallClick}
       onMobileInstall={handleMobileInstallFallback}
+      user={user}
+      onLogout={handleLogout}
     >
       <motion.div key={currentTab} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.15 }}>
         {currentTab === 'board' && (
@@ -630,7 +688,7 @@ export default function App() {
           message={snackbarMsg}
           actionLabel="Undo"
           onAction={() => {
-            try { if (undoRef.current.revert) undoRef.current.revert(); } catch {}
+            try { if (undoRef.current.revert) undoRef.current.revert(); } catch { }
             if (undoRef.current.timer) clearTimeout(undoRef.current.timer);
             undoRef.current = { timer: null, commit: null, revert: null };
             setSnackbarOpen(false);
@@ -647,21 +705,59 @@ export default function App() {
           <CompletedList tasksByQuadrant={tasks} />
         )}
         {currentTab === 'settings' && (
-          <div className="space-y-3">
-            <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
-              <h3 className="font-semibold text-slate-800 mb-1">Appearance</h3>
+          <div className="space-y-4 pb-6">
+            {/* User Profile Card */}
+            <div className={`p-4 rounded-2xl border shadow-sm flex items-center gap-4 transition-colors ${isDark ? 'bg-slate-800/80 border-slate-700/80 text-slate-100' : 'bg-white border-slate-200 text-slate-800'
+              }`}>
+              <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-blue-500 to-purple-600 flex items-center justify-center text-white text-xl font-bold shadow-md shadow-blue-500/10 flex-shrink-0">
+                {(user.name || 'U').charAt(0).toUpperCase()}
+              </div>
+              <div className="min-w-0 flex-1">
+                <h4 className="font-bold text-base truncate">{user.name || 'User'}</h4>
+                <p className={`text-xs truncate ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>{user.email}</p>
+                {user.createdAt && (
+                  <p className={`text-[10px] mt-1 ${isDark ? 'text-slate-555' : 'text-gray-400'}`}>
+                    Member since {new Date(user.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long' })}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Appearance settings */}
+            <div className={`p-4 rounded-2xl border shadow-sm transition-colors ${isDark ? 'bg-slate-800/80 border-slate-700/80 text-slate-100' : 'bg-white border-slate-200/60 text-slate-800'
+              }`}>
+              <h3 className="font-semibold text-sm mb-2.5">Appearance</h3>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-600">Theme</span>
+                <span className={`text-xs font-medium ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Theme Mode</span>
                 <div className="flex items-center gap-2">
-                  <button onClick={() => setTheme('light')} className={`px-3 py-1 rounded-full text-sm border ${theme === 'light' ? 'bg-slate-900 text-white border-slate-900' : 'border-slate-300'}`}>Light</button>
-                  <button onClick={() => setTheme('dark')} className={`px-3 py-1 rounded-full text-sm border ${theme === 'dark' ? 'bg-slate-900 text-white border-slate-900' : 'border-slate-300'}`}>Dark</button>
+                  <button
+                    onClick={() => setTheme('light')}
+                    className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all ${theme === 'light'
+                        ? 'bg-slate-900 text-white border-slate-900 dark:bg-white dark:text-slate-900 dark:border-white shadow-sm'
+                        : 'border-slate-200 text-slate-500 hover:text-slate-800 dark:border-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+                      }`}
+                  >
+                    Light
+                  </button>
+                  <button
+                    onClick={() => setTheme('dark')}
+                    className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all ${theme === 'dark'
+                        ? 'bg-slate-900 text-white border-slate-900 dark:bg-white dark:text-slate-900 dark:border-white shadow-sm'
+                        : 'border-slate-200 text-slate-500 hover:text-slate-800 dark:border-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+                      }`}
+                  >
+                    Dark
+                  </button>
                 </div>
               </div>
             </div>
-            <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
-              <h3 className="font-semibold text-slate-800 mb-1">Weekly Goal</h3>
+
+            {/* Weekly goal settings */}
+            <div className={`p-4 rounded-2xl border shadow-sm transition-colors ${isDark ? 'bg-slate-800/80 border-slate-700/80 text-slate-100' : 'bg-white border-slate-200/60 text-slate-800'
+              }`}>
+              <h3 className="font-semibold text-sm mb-2.5">Weekly Goal</h3>
               <div className="flex items-center justify-between gap-3">
-                <span className="text-sm text-slate-600">Tasks per week</span>
+                <span className={`text-xs font-medium ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Target Tasks Per Week</span>
                 <div className="flex items-center gap-2">
                   <input
                     type="number"
@@ -673,15 +769,30 @@ export default function App() {
                       const v = parseInt(e.target.value, 10);
                       if (Number.isFinite(v) && v > 0) setWeeklyGoal(v);
                     }}
-                    className="w-20 px-2 py-1 rounded-lg border border-slate-300 text-sm"
+                    className={`w-20 px-2 py-1 rounded-lg border outline-none text-xs text-center font-semibold ${isDark
+                        ? 'bg-slate-950/40 border-slate-700 text-slate-100 focus:border-blue-500/80'
+                        : 'bg-white border-slate-300 text-slate-800 focus:border-blue-500/80'
+                      }`}
                   />
                 </div>
               </div>
             </div>
-            <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
-              <h3 className="font-semibold text-slate-800 mb-1">App Info</h3>
-              <p className="text-sm text-slate-600">Quadra — Eisenhower Matrix task manager.</p>
+
+            {/* App Info card */}
+            <div className={`p-4 rounded-2xl border shadow-sm transition-colors ${isDark ? 'bg-slate-800/80 border-slate-700/80 text-slate-100' : 'bg-white border-slate-200/60 text-slate-800'
+              }`}>
+              <h3 className="font-semibold text-sm mb-1.5">App Info</h3>
+              <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Quadra — Eisenhower Matrix task manager.</p>
             </div>
+
+            {/* Logout button */}
+            <button
+              onClick={handleLogout}
+              className="w-full mt-4 py-3.5 rounded-2xl bg-red-50 text-red-600 border border-red-200 font-bold text-xs sm:text-sm shadow-sm hover:bg-red-100 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/40 dark:hover:bg-red-950/40 transition-all duration-300 flex items-center justify-center gap-2 active:scale-98"
+            >
+              <FiLogOut size={16} />
+              <span>Logout</span>
+            </button>
           </div>
         )}
       </motion.div>
@@ -691,12 +802,11 @@ export default function App() {
         {alerts.map((alert) => (
           <div
             key={alert.id}
-            className={`p-3 rounded-lg shadow-lg text-sm font-medium animate-slide-in ${
-              alert.type === 'error' ? 'bg-red-100 text-red-800 border border-red-200' :
-              alert.type === 'warning' ? 'bg-yellow-100 text-yellow-800 border border-yellow-200' :
-              alert.type === 'success' ? 'bg-green-100 text-green-800 border border-green-200' :
-              'bg-blue-100 text-blue-800 border border-blue-200'
-            }`}
+            className={`p-3 rounded-lg shadow-lg text-sm font-medium animate-slide-in ${alert.type === 'error' ? 'bg-red-100 text-red-800 border border-red-200' :
+                alert.type === 'warning' ? 'bg-yellow-100 text-yellow-800 border border-yellow-200' :
+                  alert.type === 'success' ? 'bg-green-100 text-green-800 border border-green-200' :
+                    'bg-blue-100 text-blue-800 border border-blue-200'
+              }`}
           >
             {alert.message}
           </div>
@@ -705,20 +815,24 @@ export default function App() {
 
       {/* Welcome Modal */}
       {showWelcome && (
-        <motion.div 
+        <motion.div
           className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
         >
-          <motion.div 
-            className="bg-white/95 backdrop-blur-md rounded-3xl p-8 max-w-md w-full shadow-2xl border border-white/20 text-center"
+          <motion.div
+            className={`backdrop-blur-md rounded-3xl p-8 max-w-md w-full shadow-2xl border text-center ${
+              isDark 
+                ? 'bg-slate-900/95 border-slate-800 text-slate-100 shadow-slate-950/50' 
+                : 'bg-white/95 border-white/20 text-slate-800'
+            }`}
             initial={{ scale: 0.8, opacity: 0, y: 50 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.8, opacity: 0, y: 50 }}
             transition={{ type: "spring", stiffness: 300, damping: 25 }}
           >
-            <motion.div 
+            <motion.div
               className="w-20 h-20 bg-gradient-to-r from-blue-500 to-purple-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg"
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
@@ -726,46 +840,46 @@ export default function App() {
             >
               <span className="text-3xl">🎯</span>
             </motion.div>
-            
+
             <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
-              Welcome to Focus First Task Manager!
+              Welcome to Focus First!
             </h2>
-            
-            <p className="text-gray-600 mb-6 leading-relaxed">
-              Organize your tasks using the powerful Eisenhower Matrix. 
+
+            <p className={`mb-6 leading-relaxed text-sm ${isDark ? 'text-slate-300' : 'text-gray-600'}`}>
+              Organize your tasks using the powerful Eisenhower Matrix.
               Drag and drop tasks between quadrants to prioritize effectively.
             </p>
-            
+
             <div className="space-y-3 mb-8 text-left">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
-                  <span className="text-red-600 text-sm">⚡</span>
+                <div className="w-8 h-8 bg-red-100 dark:bg-red-950/40 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <span className="text-red-600 dark:text-red-400 text-sm">⚡</span>
                 </div>
-                <span className="text-sm text-gray-700">Important & Urgent - Do First</span>
+                <span className={`text-sm ${isDark ? 'text-slate-200 font-medium' : 'text-gray-700'}`}>Important & Urgent - Do First</span>
               </div>
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <span className="text-blue-600 text-sm">🎯</span>
+                <div className="w-8 h-8 bg-blue-100 dark:bg-blue-950/40 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <span className="text-blue-600 dark:text-blue-400 text-sm">🎯</span>
                 </div>
-                <span className="text-sm text-gray-700">Important & Not Urgent - Schedule</span>
+                <span className={`text-sm ${isDark ? 'text-slate-200 font-medium' : 'text-gray-700'}`}>Important & Not Urgent - Schedule</span>
               </div>
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
-                  <span className="text-yellow-600 text-sm">⏰</span>
+                <div className="w-8 h-8 bg-yellow-100 dark:bg-yellow-950/40 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <span className="text-yellow-600 dark:text-yellow-400 text-sm">⏰</span>
                 </div>
-                <span className="text-sm text-gray-700">Not Important & Urgent - Delegate</span>
+                <span className={`text-sm ${isDark ? 'text-slate-200 font-medium' : 'text-gray-700'}`}>Not Important & Urgent - Delegate</span>
               </div>
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                  <span className="text-green-600 text-sm">✅</span>
+                <div className="w-8 h-8 bg-green-100 dark:bg-green-950/40 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <span className="text-green-600 dark:text-green-400 text-sm">✅</span>
                 </div>
-                <span className="text-sm text-gray-700">Not Important & Not Urgent - Eliminate</span>
+                <span className={`text-sm ${isDark ? 'text-slate-200 font-medium' : 'text-gray-700'}`}>Not Important & Not Urgent - Eliminate</span>
               </div>
             </div>
-            
+
             <motion.button
               onClick={() => setShowWelcome(false)}
-              className="w-full px-6 py-3 rounded-2xl bg-gradient-to-r from-blue-500 to-purple-600 text-white font-medium shadow-lg hover:shadow-xl transition-all duration-300"
+              className="w-full px-6 py-3 rounded-2xl bg-gradient-to-r from-blue-500 to-purple-600 text-white font-bold shadow-lg hover:shadow-xl transition-all duration-300 text-sm sm:text-base"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
@@ -778,8 +892,8 @@ export default function App() {
       {/* Task Modal */}
       {showModal && <TaskModal addTask={addTask} onClose={() => setShowModal(false)} tasks={tasks} />}
       {showEditModal && editTask && (
-        <TaskEditModal 
-          task={editTask} 
+        <TaskEditModal
+          task={editTask}
           quadrant={editQuadrant}
           allTasks={tasks}
           onSave={saveEditedTask}

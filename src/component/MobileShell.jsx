@@ -39,46 +39,48 @@ export default function MobileShell({
             </div>
           </div>
 
-          {/* Right side install button */}
-          {!isStandalone && (
-            <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-              {/* Standard install prompt for Android/Desktop */}
-              {deferredPrompt && !isIOS && (
-                <button
-                  onClick={onInstallClick}
-                  className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-3 py-1.5 rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-300 flex items-center gap-1.5 text-xs font-semibold shadow-md active:scale-95"
-                  title="Install Focus First Task Manager App"
-                >
-                  <FiDownload size={14} />
-                  <span>Install App</span>
-                </button>
-              )}
-              
-              {/* iOS install instructions button */}
-              {isIOS && (
-                <button
-                  onClick={onInstallClick}
-                  className="bg-gradient-to-r from-green-500 to-green-600 text-white px-3 py-1.5 rounded-xl hover:from-green-600 hover:to-green-700 transition-all duration-300 flex items-center gap-1.5 text-xs font-semibold shadow-md active:scale-95"
-                  title="How to install on iPhone"
-                >
-                  <FiDownload size={14} />
-                  <span>Install</span>
-                </button>
-              )}
-              
-              {/* Fallback for Android when no prompt is available */}
-              {!deferredPrompt && !isIOS && (
-                <button
-                  onClick={onMobileInstall}
-                  className="bg-gradient-to-r from-gray-500 to-gray-600 text-white px-3 py-1.5 rounded-xl hover:from-gray-600 hover:to-gray-700 transition-all duration-300 flex items-center gap-1.5 text-xs font-semibold shadow-md active:scale-95"
-                  title="Try to install app"
-                >
-                  <FiDownload size={14} />
-                  <span>Install</span>
-                </button>
-              )}
-            </div>
-          )}
+          {/* Right side header actions */}
+          <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+            {!isStandalone && (
+              <>
+                {/* Standard install prompt for Android/Desktop */}
+                {deferredPrompt && !isIOS && (
+                  <button
+                    onClick={onInstallClick}
+                    className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-3 py-1.5 rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-300 flex items-center gap-1.5 text-xs font-semibold shadow-md active:scale-95"
+                    title="Install Focus First Task Manager App"
+                  >
+                    <FiDownload size={14} />
+                    <span>Install App</span>
+                  </button>
+                )}
+                
+                {/* iOS install instructions button */}
+                {isIOS && (
+                  <button
+                    onClick={onInstallClick}
+                    className="bg-gradient-to-r from-green-500 to-green-600 text-white px-3 py-1.5 rounded-xl hover:from-green-600 hover:to-green-700 transition-all duration-300 flex items-center gap-1.5 text-xs font-semibold shadow-md active:scale-95"
+                    title="How to install on iPhone"
+                  >
+                    <FiDownload size={14} />
+                    <span>Install</span>
+                  </button>
+                )}
+                
+                {/* Fallback for Android when no prompt is available */}
+                {!deferredPrompt && !isIOS && (
+                  <button
+                    onClick={onMobileInstall}
+                    className="bg-gradient-to-r from-gray-500 to-gray-600 text-white px-3 py-1.5 rounded-xl hover:from-gray-600 hover:to-gray-700 transition-all duration-300 flex items-center gap-1.5 text-xs font-semibold shadow-md active:scale-95"
+                    title="Try to install app"
+                  >
+                    <FiDownload size={14} />
+                    <span>Install</span>
+                  </button>
+                )}
+              </>
+            )}
+          </div>
         </div>
       </header>
 

@@ -1,11 +1,11 @@
 import React from "react";
-import { FiGrid, FiCheckCircle, FiSettings, FiPieChart } from "react-icons/fi";
+import { FiGrid, FiCheckCircle, FiUser, FiPieChart } from "react-icons/fi";
 
 const tabs = [
   { id: "board", label: "Board", icon: FiGrid },
   { id: "analytics", label: "Analytics", icon: FiPieChart },
   { id: "completed", label: "Completed", icon: FiCheckCircle },
-  { id: "settings", label: "Settings", icon: FiSettings },
+  { id: "settings", label: "Profile", icon: FiUser },
 ];
 
 export default function BottomNav({ currentTab, onTabChange, theme = 'light' }) {

@@ -30,7 +30,7 @@ const priorityConfig = {
 
 const quadrantColors = {
   q1: "border-l-red-500",
-  q2: "border-l-blue-500", 
+  q2: "border-l-blue-500",
   q3: "border-l-yellow-500",
   q4: "border-l-green-500",
 };
@@ -61,13 +61,13 @@ export default function TaskCard({ task, index, quadrant, onEdit, onDelete, onCo
 
     document.addEventListener("mousedown", handleOutsideClick);
     document.addEventListener("touchstart", handleOutsideClick);
-    
+
     return () => {
       document.removeEventListener("mousedown", handleOutsideClick);
       document.removeEventListener("touchstart", handleOutsideClick);
     };
   }, [showMenu, showQuadrantMenu]);
-  
+
   const isDueToday = task.due && new Date(task.due).toDateString() === new Date().toDateString();
   const priority = priorityConfig[task.priority] || priorityConfig.Medium;
   const PriorityIcon = priority.icon;
@@ -90,353 +90,345 @@ export default function TaskCard({ task, index, quadrant, onEdit, onDelete, onCo
     <Draggable draggableId={task.id} index={index} type="TASK">
       {(provided, snapshot) => {
         const card = (
-        <div
-          ref={provided.innerRef}
-          {...provided.draggableProps}
-          style={provided.draggableProps.style}
-          className={`relative rounded-2xl ${
-            showMenu || showQuadrantMenu ? 'overflow-visible z-30' : 'overflow-hidden'
-          }`}
-        >
           <div
-            className="absolute inset-0 flex items-center justify-between px-4 pointer-events-none"
-            style={{
-              background: dx > 0
-                ? `linear-gradient(90deg, rgba(16,185,129,${0.10 + 0.20 * Math.min(1, Math.abs(dx) / 80)}), transparent)`
-                : dx < 0
-                ? `linear-gradient(270deg, rgba(239,68,68,${0.10 + 0.20 * Math.min(1, Math.abs(dx) / 80)}), transparent)`
-                : 'transparent',
-            }}
+            ref={provided.innerRef}
+            {...provided.draggableProps}
+            style={provided.draggableProps.style}
+            className={`relative rounded-2xl ${showMenu || showQuadrantMenu ? 'overflow-visible z-30' : 'overflow-hidden'
+              }`}
           >
             <div
-              className="flex items-center gap-2 font-semibold text-sm"
+              className="absolute inset-0 flex items-center justify-between px-4 pointer-events-none"
               style={{
-                opacity: dx > 10 ? Math.min(1, Math.abs(dx) / 80) : 0,
-                color: isDark ? '#86efac' : '#047857',
+                background: dx > 0
+                  ? `linear-gradient(90deg, rgba(16,185,129,${0.10 + 0.20 * Math.min(1, Math.abs(dx) / 80)}), transparent)`
+                  : dx < 0
+                    ? `linear-gradient(270deg, rgba(239,68,68,${0.10 + 0.20 * Math.min(1, Math.abs(dx) / 80)}), transparent)`
+                    : 'transparent',
               }}
             >
-              <FiCheckCircle className="text-base" />
-              <span>Complete</span>
+              <div
+                className="flex items-center gap-2 font-semibold text-sm"
+                style={{
+                  opacity: dx > 10 ? Math.min(1, Math.abs(dx) / 80) : 0,
+                  color: isDark ? '#86efac' : '#047857',
+                }}
+              >
+                <FiCheckCircle className="text-base" />
+                <span>Complete</span>
+              </div>
+              <div
+                className="flex items-center gap-2 font-semibold text-sm"
+                style={{
+                  opacity: dx < -10 ? Math.min(1, Math.abs(dx) / 80) : 0,
+                  color: isDark ? '#fca5a5' : '#b91c1c',
+                }}
+              >
+                <span>Delete</span>
+                <FiTrash2 className="text-base" />
+              </div>
             </div>
-            <div
-              className="flex items-center gap-2 font-semibold text-sm"
-              style={{
-                opacity: dx < -10 ? Math.min(1, Math.abs(dx) / 80) : 0,
-                color: isDark ? '#fca5a5' : '#b91c1c',
-              }}
-            >
-              <span>Delete</span>
-              <FiTrash2 className="text-base" />
-            </div>
-          </div>
 
-          <div
-            className={`group relative ${compact ? 'p-2.5 sm:p-3 pl-10 sm:pl-12' : 'p-3 sm:p-4 pl-12 sm:pl-14'} rounded-2xl ${isDark ? 'bg-slate-800 text-slate-100' : 'bg-white'} shadow-lg border-l-4 overflow-visible ${
-              snapshot.isDragging 
-                ? "shadow-2xl z-50" 
-                : (showMenu || showQuadrantMenu)
-                ? "shadow-xl z-30 ring-2 ring-blue-100/50 dark:ring-blue-900/30" 
-                : "hover:shadow-xl transition-shadow duration-200 z-10"
-            } ${quadrantColors[quadrant]} border ${isDark ? 'border-slate-700' : 'border-gray-100'}`}
-            style={{ transform: `translateX(${dx}px)`, transition: swiping ? 'none' : 'transform 160ms ease-out' }}
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => {
-              setIsHovered(false);
-              setTimeout(() => {
-                if (!showMenu) setShowMenu(false);
-                if (!showQuadrantMenu) setShowQuadrantMenu(false);
-              }, 200);
-            }}
-            onClick={(e) => {
-              if (Math.abs(dx) > 5) return;
-              if (!e.target.closest('.drag-handle') && !e.target.closest('.action-menu')) {
-                onEdit && onEdit(task, quadrant);
-              }
-            }}
-            onTouchStart={(e) => {
-              if (e.target.closest('.drag-handle') || e.target.closest('.action-menu')) return;
-              const t = e.touches[0];
-              startXRef.current = t.clientX;
-              setSwiping(true);
-            }}
-            onTouchMove={(e) => {
-              if (!swiping) return;
-              const t = e.touches[0];
-              const delta = t.clientX - startXRef.current;
-              setDx(delta);
-              if (Math.abs(delta) > 8) {
-                try { e.preventDefault(); } catch {}
-              }
-            }}
-            onTouchEnd={() => {
-              if (!swiping) return;
-              const threshold = 80;
-              const delta = dx;
-              setSwiping(false);
-              setDx(0);
-              if (delta > threshold) {
-                onComplete && onComplete(task, quadrant);
-                return;
-              }
-              if (delta < -threshold) {
-                if (window.confirm('Are you sure you want to delete this task?')) {
-                  onDelete && onDelete(task.id, quadrant);
+            <div
+              className={`group relative ${compact ? 'p-2.5 sm:p-3 pl-10 sm:pl-12' : 'p-3 sm:p-4 pl-12 sm:pl-14'} rounded-2xl ${isDark ? 'bg-slate-800 text-slate-100' : 'bg-white'} shadow-lg border-l-4 overflow-visible ${snapshot.isDragging
+                  ? "shadow-2xl z-50"
+                  : (showMenu || showQuadrantMenu)
+                    ? "shadow-xl z-30 ring-2 ring-blue-100/50 dark:ring-blue-900/30"
+                    : "hover:shadow-xl transition-shadow duration-200 z-10"
+                } ${quadrantColors[quadrant]} border ${isDark ? 'border-slate-700' : 'border-gray-100'}`}
+              style={{ transform: `translateX(${dx}px)`, transition: swiping ? 'none' : 'transform 160ms ease-out' }}
+              onMouseEnter={() => setIsHovered(true)}
+              onMouseLeave={() => {
+                setIsHovered(false);
+                setTimeout(() => {
+                  if (!showMenu) setShowMenu(false);
+                  if (!showQuadrantMenu) setShowQuadrantMenu(false);
+                }, 200);
+              }}
+              onClick={(e) => {
+                if (Math.abs(dx) > 5) return;
+                if (!e.target.closest('.drag-handle') && !e.target.closest('.action-menu')) {
+                  onEdit && onEdit(task, quadrant);
                 }
-                return;
-              }
-            }}
-            onTouchCancel={() => {
-              setSwiping(false);
-              setDx(0);
-            }}
-          >
-          {/* Drag Handle - Full height */}
-          <div 
-            {...provided.dragHandleProps}
-            className="drag-handle absolute left-0 top-0 bottom-0 w-7 sm:w-8 flex items-center justify-center bg-gray-50 sm:hover:bg-blue-50 border-r border-gray-200 sm:group-hover:border-blue-300 opacity-90 sm:opacity-70 sm:group-hover:opacity-100 cursor-grab active:cursor-grabbing transition-all duration-200 touch-none select-none"
-            onClick={(e) => e.stopPropagation()}
-            title="Drag to reorder"
-          >
-            <svg 
-              xmlns="http://www.w3.org/2000/svg" 
-              width="12" 
-              height="20" 
-              viewBox="0 0 24 24" 
-              fill="none" 
-              stroke="currentColor" 
-              strokeWidth="2.5" 
-              strokeLinecap="round" 
-              strokeLinejoin="round"
-              className="text-gray-400 group-hover:text-blue-500 transition-colors"
+              }}
+              onTouchStart={(e) => {
+                if (e.target.closest('.drag-handle') || e.target.closest('.action-menu')) return;
+                const t = e.touches[0];
+                startXRef.current = t.clientX;
+                setSwiping(true);
+              }}
+              onTouchMove={(e) => {
+                if (!swiping) return;
+                const t = e.touches[0];
+                const delta = t.clientX - startXRef.current;
+                setDx(delta);
+                if (Math.abs(delta) > 8) {
+                  try { e.preventDefault(); } catch { }
+                }
+              }}
+              onTouchEnd={() => {
+                if (!swiping) return;
+                const threshold = 80;
+                const delta = dx;
+                setSwiping(false);
+                setDx(0);
+                if (delta > threshold) {
+                  onComplete && onComplete(task, quadrant);
+                  return;
+                }
+                if (delta < -threshold) {
+                  if (window.confirm('Are you sure you want to delete this task?')) {
+                    onDelete && onDelete(task.id, quadrant);
+                  }
+                  return;
+                }
+              }}
+              onTouchCancel={() => {
+                setSwiping(false);
+                setDx(0);
+              }}
             >
-              <circle cx="9" cy="5" r="1.5"></circle>
-              <circle cx="9" cy="12" r="1.5"></circle>
-              <circle cx="9" cy="19" r="1.5"></circle>
-              <circle cx="15" cy="5" r="1.5"></circle>
-              <circle cx="15" cy="12" r="1.5"></circle>
-              <circle cx="15" cy="19" r="1.5"></circle>
-            </svg>
-          </div>
-          {/* Header: icon + title (row 1) and menu button */}
-            <div className={`flex items-start justify-between ${compact ? 'mb-1' : 'mb-2 sm:mb-3'} pr-1 gap-2`}>
-              <div className="flex items-center gap-2 min-w-0 flex-1">
-                <div 
-                  className={`${compact ? 'w-6 h-6' : 'w-7 h-7 sm:w-8 sm:h-8'} rounded-lg bg-gradient-to-r ${priority.color} flex items-center justify-center shadow-md transition-transform duration-200 hover:scale-110`}
+              {/* Drag Handle - Full height */}
+              <div
+                {...provided.dragHandleProps}
+                className="drag-handle absolute left-0 top-0 bottom-0 w-7 sm:w-8 flex items-center justify-center bg-gray-50 dark:bg-slate-700/40 sm:hover:bg-blue-50 dark:sm:hover:bg-slate-700/60 border-r border-gray-200 dark:border-slate-700/50 opacity-90 sm:opacity-70 sm:group-hover:opacity-100 cursor-grab active:cursor-grabbing transition-all duration-200 touch-none select-none"
+                onClick={(e) => e.stopPropagation()}
+                title="Drag to reorder"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="12"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="text-gray-400 dark:text-slate-500 group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-colors"
                 >
-                  <PriorityIcon className="text-white text-xs sm:text-sm" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 title={task.title} className={`font-semibold ${isDark ? 'text-slate-100' : 'text-gray-800'} ${compact ? 'text-sm' : 'text-sm sm:text-base'} leading-snug ${compact ? 'line-clamp-2' : 'line-clamp-3 sm:line-clamp-2'} break-words`}>
-                    {task.title}
-                  </h3>
-                </div>
+                  <circle cx="9" cy="5" r="1.5"></circle>
+                  <circle cx="9" cy="12" r="1.5"></circle>
+                  <circle cx="9" cy="19" r="1.5"></circle>
+                  <circle cx="15" cy="5" r="1.5"></circle>
+                  <circle cx="15" cy="12" r="1.5"></circle>
+                  <circle cx="15" cy="19" r="1.5"></circle>
+                </svg>
               </div>
-
-              {/* Quadrant Quick Switcher & Action Menu wrapper */}
-              <div className="flex items-center gap-1 flex-shrink-0">
-                {/* Quadrant Quick Switcher */}
-                <div className="relative" ref={quadMenuAnchorRef}>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowQuadrantMenu((v) => !v);
-                      setShowMenu(false);
-                    }}
-                    className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg font-bold text-[10px] sm:text-xs flex items-center justify-center border shadow-sm transition-all duration-200 hover:scale-105 active:scale-95 ${
-                      quadrant === 'q1'
-                        ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100 dark:bg-red-950/40 dark:text-red-400 dark:border-red-900/60 dark:hover:bg-red-950/60'
-                        : quadrant === 'q2'
-                        ? 'bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-900/60 dark:hover:bg-blue-950/60'
-                        : quadrant === 'q3'
-                        ? 'bg-yellow-50 text-yellow-600 border-yellow-200 hover:bg-yellow-100 dark:bg-yellow-950/40 dark:text-yellow-400 dark:border-yellow-900/60 dark:hover:bg-yellow-950/60'
-                        : 'bg-green-50 text-green-600 border-green-200 hover:bg-green-100 dark:bg-green-950/40 dark:text-green-400 dark:border-green-900/60 dark:hover:bg-green-950/60'
-                    }`}
-                    title="Move to another quadrant"
+              {/* Header: icon + title (row 1) and menu button */}
+              <div className={`flex items-start justify-between ${compact ? 'mb-1' : 'mb-2 sm:mb-3'} pr-1 gap-2`}>
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <div
+                    className={`${compact ? 'w-6 h-6' : 'w-7 h-7 sm:w-8 sm:h-8'} rounded-lg bg-gradient-to-r ${priority.color} flex items-center justify-center shadow-md transition-transform duration-200 hover:scale-110`}
                   >
-                    {quadrant.toUpperCase()}
-                  </button>
+                    <PriorityIcon className="text-white text-xs sm:text-sm" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 title={task.title} className={`font-semibold ${isDark ? 'text-slate-100' : 'text-gray-800'} ${compact ? 'text-sm' : 'text-sm sm:text-base'} leading-snug ${compact ? 'line-clamp-2' : 'line-clamp-3 sm:line-clamp-2'} break-words`}>
+                      {task.title}
+                    </h3>
+                  </div>
+                </div>
 
-                  <AnimatePresence>
-                    {showQuadrantMenu && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                        transition={{ duration: 0.15 }}
-                        className={`absolute right-0 top-full mt-1 w-44 rounded-xl shadow-2xl border z-50 p-1 flex flex-col gap-0.5 ${
-                          isDark 
-                            ? 'bg-slate-900 text-slate-100 border-slate-700' 
-                            : 'bg-white text-gray-800 border-gray-100'
+                {/* Quadrant Quick Switcher & Action Menu wrapper */}
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  {/* Quadrant Quick Switcher */}
+                  <div className="relative" ref={quadMenuAnchorRef}>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowQuadrantMenu((v) => !v);
+                        setShowMenu(false);
+                      }}
+                      className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg font-bold text-[10px] sm:text-xs flex items-center justify-center border shadow-sm transition-all duration-200 hover:scale-105 active:scale-95 ${quadrant === 'q1'
+                          ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100 dark:bg-red-950/40 dark:text-red-400 dark:border-red-900/60 dark:hover:bg-red-950/60'
+                          : quadrant === 'q2'
+                            ? 'bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-900/60 dark:hover:bg-blue-950/60'
+                            : quadrant === 'q3'
+                              ? 'bg-yellow-50 text-yellow-600 border-yellow-200 hover:bg-yellow-100 dark:bg-yellow-950/40 dark:text-yellow-400 dark:border-yellow-900/60 dark:hover:bg-yellow-950/60'
+                              : 'bg-green-50 text-green-600 border-green-200 hover:bg-green-100 dark:bg-green-950/40 dark:text-green-400 dark:border-green-900/60 dark:hover:bg-green-950/60'
                         }`}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {[
-                          { id: 'q1', label: 'Q1', desc: 'Urgent & Important', color: 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20' },
-                          { id: 'q2', label: 'Q2', desc: 'Important & Not Urgent', color: 'text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/20' },
-                          { id: 'q3', label: 'Q3', desc: 'Urgent & Not Important', color: 'text-yellow-600 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-950/20' },
-                          { id: 'q4', label: 'Q4', desc: 'Not Urgent & Not Important', color: 'text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-950/20' }
-                        ].map((item) => (
-                          <button
-                            key={item.id}
-                            type="button"
-                            onClick={() => {
-                              if (item.id !== quadrant && typeof onMove === 'function') {
-                                onMove(task, quadrant, item.id);
-                              }
-                              setShowQuadrantMenu(false);
-                            }}
-                            className={`w-full px-2.5 py-1.5 text-left rounded-lg transition-colors flex flex-col ${item.color} ${
-                              item.id === quadrant 
-                                ? (isDark ? 'bg-slate-800 font-semibold' : 'bg-gray-50 font-semibold') 
-                                : ''
-                            }`}
-                          >
-                            <span className="text-[11px] font-bold">{item.label}</span>
-                            <span className={`text-[9px] font-normal leading-tight ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>{item.desc}</span>
-                          </button>
-                        ))}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-
-                {/* Action Menu Button */}
-                <div className="relative action-menu" ref={menuAnchorRef}>
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      // Decide whether to open above or below based on viewport space
-                      try {
-                        const rect = menuAnchorRef.current?.getBoundingClientRect();
-                        if (rect) {
-                          const spaceBelow = window.innerHeight - rect.bottom;
-                          setMenuPlacement(spaceBelow < 200 ? 'above' : 'below');
-                        }
-                      } catch {}
-                      setShowMenu((v) => !v);
-                      setShowQuadrantMenu(false);
-                    }}
-                    className="p-2 sm:p-2.5 rounded-full hover:bg-gray-100 transition-colors text-gray-600"
-                  >
-                    <FiMoreVertical className="text-lg sm:text-base" />
-                  </button>
-                
-                {/* Dropdown Menu */}
-                <AnimatePresence>
-                  {showMenu && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                      transition={{ duration: 0.15 }}
-                      className={`absolute right-0 ${menuPlacement === 'above' ? 'bottom-full mb-2' : 'top-full mt-2'} w-48 sm:w-44 ${isDark ? 'bg-slate-900 text-slate-100 border-slate-700' : 'bg-white'} rounded-xl shadow-2xl border z-50 overflow-auto max-h-[50vh] p-1`}
-                      onClick={(e) => e.stopPropagation()}
+                      title="Move to another quadrant"
                     >
-                      <button 
-                        onClick={() => {
-                          onEdit && onEdit(task, quadrant);
-                          setShowMenu(false);
-                        }}
-                        className="w-full min-h-[44px] px-3 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2.5 rounded-lg"
-                      >
-                        <FiEdit2 className="text-blue-500" />
-                        <span>Edit</span>
-                      </button>
-                      <button 
-                        onClick={() => {
-                          onComplete && onComplete(task, quadrant);
-                          setShowMenu(false);
-                        }}
-                        className="w-full min-h-[44px] px-3 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2.5 rounded-lg"
-                      >
-                        <FiCheckCircle className="text-green-500" />
-                        <span>Complete</span>
-                      </button>
-                      <button 
-                        onClick={() => {
-                          if (window.confirm('Are you sure you want to delete this task?')) {
-                            onDelete && onDelete(task.id, quadrant);
-                          }
-                          setShowMenu(false);
-                        }}
-                        className="w-full min-h-[44px] px-3 py-2.5 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2.5 rounded-lg"
-                      >
-                        <FiTrash2 className="text-red-500" />
-                        <span>Delete</span>
-                      </button>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            </div>
-          </div>
+                      {quadrant.toUpperCase()}
+                    </button>
 
-            {/* Meta row (row 2): priority left, due date right */}
-            <div className="flex items-center justify-between mb-1">
-              <span className={`text-[11px] sm:text-xs font-medium ${isDark ? 'text-slate-300' : priority.textColor}`}>
-                {priority.label}
-              </span>
-              {task.due && (
-                <div 
-                  className={`ml-2 flex items-center gap-1 text-[11px] sm:text-xs whitespace-nowrap ${
-                    isDueToday ? 'text-red-500 font-semibold' : (isDark ? 'text-slate-300' : 'text-gray-500')
-                  }`}
-                  title={`Due: ${new Date(task.due).toLocaleDateString()}`}
-                >
-                  <FiClock className="text-xs" />
-                  <span>{relativeDueLabel}</span>
+                    <AnimatePresence>
+                      {showQuadrantMenu && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                          transition={{ duration: 0.15 }}
+                          className={`absolute right-0 top-full mt-1 w-44 rounded-xl shadow-2xl border z-50 p-1 flex flex-col gap-0.5 ${isDark
+                              ? 'bg-slate-900 text-slate-100 border-slate-700'
+                              : 'bg-white text-gray-800 border-gray-100'
+                            }`}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {[
+                            { id: 'q1', label: 'Q1', desc: 'Urgent & Important', color: 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20' },
+                            { id: 'q2', label: 'Q2', desc: 'Important & Not Urgent', color: 'text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/20' },
+                            { id: 'q3', label: 'Q3', desc: 'Urgent & Not Important', color: 'text-yellow-600 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-950/20' },
+                            { id: 'q4', label: 'Q4', desc: 'Not Urgent & Not Important', color: 'text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-950/20' }
+                          ].map((item) => (
+                            <button
+                              key={item.id}
+                              type="button"
+                              onClick={() => {
+                                if (item.id !== quadrant && typeof onMove === 'function') {
+                                  onMove(task, quadrant, item.id);
+                                }
+                                setShowQuadrantMenu(false);
+                              }}
+                              className={`w-full px-2.5 py-1.5 text-left rounded-lg transition-colors flex flex-col ${item.color} ${item.id === quadrant
+                                  ? (isDark ? 'bg-slate-800 font-semibold' : 'bg-gray-50 font-semibold')
+                                  : ''
+                                }`}
+                            >
+                              <span className="text-[11px] font-bold">{item.label}</span>
+                              <span className={`text-[9px] font-normal leading-tight ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>{item.desc}</span>
+                            </button>
+                          ))}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+
+                  {/* Action Menu Button */}
+                  <div className="relative action-menu" ref={menuAnchorRef}>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        // Decide whether to open above or below based on viewport space
+                        try {
+                          const rect = menuAnchorRef.current?.getBoundingClientRect();
+                          if (rect) {
+                            const spaceBelow = window.innerHeight - rect.bottom;
+                            setMenuPlacement(spaceBelow < 200 ? 'above' : 'below');
+                          }
+                        } catch { }
+                        setShowMenu((v) => !v);
+                        setShowQuadrantMenu(false);
+                      }}
+                      className="p-2 sm:p-2.5 rounded-full hover:bg-gray-100 transition-colors text-gray-600"
+                    >
+                      <FiMoreVertical className="text-lg sm:text-base" />
+                    </button>
+
+                    {/* Dropdown Menu */}
+                    <AnimatePresence>
+                      {showMenu && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                          transition={{ duration: 0.15 }}
+                          className={`absolute right-0 ${menuPlacement === 'above' ? 'bottom-full mb-2' : 'top-full mt-2'} w-48 sm:w-44 ${isDark ? 'bg-slate-900 text-slate-100 border-slate-700' : 'bg-white'} rounded-xl shadow-2xl border z-50 overflow-auto max-h-[50vh] p-1`}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <button
+                            onClick={() => {
+                              onEdit && onEdit(task, quadrant);
+                              setShowMenu(false);
+                            }}
+                            className="w-full min-h-[44px] px-3 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2.5 rounded-lg"
+                          >
+                            <FiEdit2 className="text-blue-500" />
+                            <span>Edit</span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              onComplete && onComplete(task, quadrant);
+                              setShowMenu(false);
+                            }}
+                            className="w-full min-h-[44px] px-3 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2.5 rounded-lg"
+                          >
+                            <FiCheckCircle className="text-green-500" />
+                            <span>Complete</span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (window.confirm('Are you sure you want to delete this task?')) {
+                                onDelete && onDelete(task.id, quadrant);
+                              }
+                              setShowMenu(false);
+                            }}
+                            className="w-full min-h-[44px] px-3 py-2.5 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2.5 rounded-lg"
+                          >
+                            <FiTrash2 className="text-red-500" />
+                            <span>Delete</span>
+                          </button>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                </div>
+              </div>
+
+              {/* Meta row (row 2): priority left, due date right */}
+              <div className="flex items-center justify-between mb-1">
+                <span className={`text-[11px] sm:text-xs font-medium ${isDark ? 'text-slate-300' : priority.textColor}`}>
+                  {priority.label}
+                </span>
+                {task.due && (
+                  <div
+                    className={`ml-2 flex items-center gap-1 text-[11px] sm:text-xs whitespace-nowrap ${isDueToday ? 'text-red-500 font-semibold' : (isDark ? 'text-slate-300' : 'text-gray-500')
+                      }`}
+                    title={`Due: ${new Date(task.due).toLocaleDateString()}`}
+                  >
+                    <FiClock className="text-xs" />
+                    <span>{relativeDueLabel}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Due date moved to header */}
+
+              {/* Description */}
+              {task.description && (
+                <p className={`mt-2 text-xs ${isDark ? 'text-slate-300' : 'text-gray-600'} line-clamp-2`}>
+                  {task.description}
+                </p>
+              )}
+
+              {/* Tags */}
+              {Array.isArray(task.tags) && task.tags.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {task.tags.slice(0, 5).map((tag, i) => (
+                    <span
+                      key={`${tag}-${i}`}
+                      className={`px-2 py-0.5 rounded-full ${isDark ? 'bg-slate-700 text-slate-200 border-slate-600' : 'bg-gray-100 text-gray-600 border-gray-200'} text-[10px] sm:text-xs border`}
+                    >
+                      #{tag}
+                    </span>
+                  ))}
+                  {task.tags.length > 5 && (
+                    <span className={`px-2 py-0.5 rounded-full ${isDark ? 'bg-slate-700 text-slate-200 border-slate-600' : 'bg-gray-100 text-gray-600 border-gray-200'} text-[10px] sm:text-xs border`}>+{task.tags.length - 5}</span>
+                  )}
                 </div>
               )}
+              {/* Progress bar */}
+              <div className="mt-3 h-1.5 sm:h-1 bg-gray-200 rounded-full overflow-hidden">
+                <div
+                  className={`h-full bg-gradient-to-r ${priority.color} rounded-full transition-all duration-1000 delay-500`}
+                  style={{ width: "30%" }}
+                />
+              </div>
+
+              {/* Hover effect overlay */}
+              <div
+                className={`absolute inset-0 rounded-2xl bg-gradient-to-r from-blue-500/5 to-purple-500/5 pointer-events-none transition-opacity duration-200 ${isHovered ? 'opacity-100' : 'opacity-0'
+                  }`}
+              />
+              {/* Drag indicator */}
+              <div
+                className={`absolute top-2 right-2 w-2 h-2 bg-gray-300 rounded-full transition-all duration-300 ${snapshot.isDragging ? 'scale-150 opacity-100' : 'opacity-30'
+                  }`}
+              />
             </div>
-
-            {/* Due date moved to header */}
-
-          {/* Description */}
-          {task.description && (
-            <p className={`mt-2 text-xs ${isDark ? 'text-slate-300' : 'text-gray-600'} line-clamp-2`}>
-              {task.description}
-            </p>
-          )}
-
-          {/* Tags */}
-          {Array.isArray(task.tags) && task.tags.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-1">
-              {task.tags.slice(0, 5).map((tag, i) => (
-                <span
-                  key={`${tag}-${i}`}
-                  className={`px-2 py-0.5 rounded-full ${isDark ? 'bg-slate-700 text-slate-200 border-slate-600' : 'bg-gray-100 text-gray-600 border-gray-200'} text-[10px] sm:text-xs border`}
-                >
-                  #{tag}
-                </span>
-              ))}
-              {task.tags.length > 5 && (
-                <span className={`px-2 py-0.5 rounded-full ${isDark ? 'bg-slate-700 text-slate-200 border-slate-600' : 'bg-gray-100 text-gray-600 border-gray-200'} text-[10px] sm:text-xs border`}>+{task.tags.length - 5}</span>
-              )}
-            </div>
-          )}
-          {/* Progress bar */}
-          <div className="mt-3 h-1.5 sm:h-1 bg-gray-200 rounded-full overflow-hidden">
-            <div 
-              className={`h-full bg-gradient-to-r ${priority.color} rounded-full transition-all duration-1000 delay-500`}
-              style={{ width: "30%" }}
-            />
           </div>
-
-          {/* Hover effect overlay */}
-          <div 
-            className={`absolute inset-0 rounded-2xl bg-gradient-to-r from-blue-500/5 to-purple-500/5 pointer-events-none transition-opacity duration-200 ${
-              isHovered ? 'opacity-100' : 'opacity-0'
-            }`}
-          />
-          {/* Drag indicator */}
-          <div 
-            className={`absolute top-2 right-2 w-2 h-2 bg-gray-300 rounded-full transition-all duration-300 ${
-              snapshot.isDragging ? 'scale-150 opacity-100' : 'opacity-30'
-            }`}
-          />
-          </div>
-        </div>
         );
         return snapshot.isDragging ? createPortal(card, document.body) : card;
       }}

@@ -205,7 +205,7 @@ export default function TaskBoard({ tasks, setTasks, onEdit, onDelete, onComplet
         <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
           Eisenhower Matrix
         </h1>
-        <p className="text-gray-600 text-base sm:text-lg">Prioritize your tasks effectively</p>
+        <p className={`${isDark ? 'text-slate-400' : 'text-gray-600'} text-base sm:text-lg`}>Prioritize your tasks effectively</p>
       </motion.div>
 
       {/* Filters & View toggles */}
@@ -229,17 +229,17 @@ export default function TaskBoard({ tasks, setTasks, onEdit, onDelete, onComplet
             className={`w-10 h-6 rounded-full border transition-colors ${compact ? 'bg-blue-600 border-blue-600' : (isDark ? 'bg-slate-700 border-slate-600' : 'bg-slate-200 border-slate-300')}`}
             aria-pressed={compact}
           >
-            <span className={`block w-5 h-5 bg-white rounded-full mt-0.5 transition-transform ${compact ? 'translate-x-4' : 'translate-x-1'}`} />
+            <span className={`block w-5 h-5 bg-white rounded-full transition-transform ${compact ? 'translate-x-4' : 'translate-x-1'}`} />
           </button>
         </div>
       </div>
 
       <DragDropContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-5 max-w-6xl mx-auto">
+        <div className={`grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-5 max-w-6xl mx-auto ${isDark ? 'text-slate-100' : 'text-gray-800'}`}>
           {quadrants.map((q, index) => {
             const config = quadrantConfig[q.id];
             const Icon = config.icon;
-            const taskCount = (tasks[q.id] || []).length;
+            const taskCount = (tasks[q.id] || []).filter((t) => t.status !== 'completed').length;
 
             return (
               <motion.div
@@ -255,8 +255,8 @@ export default function TaskBoard({ tasks, setTasks, onEdit, onDelete, onComplet
                       ref={provided.innerRef}
                       {...provided.droppableProps}
                       className={`relative ${compact ? 'p-2.5' : 'p-3 sm:p-6'} rounded-3xl ${compact ? 'min-h-[150px]' : 'min-h-[180px] sm:min-h-[260px]'} shadow-lg border ${snapshot.isDraggingOver
-                          ? `ring-4 ring-${config.accentColor.split('-')[1]}-300 ${isDark ? 'bg-slate-800' : `bg-gradient-to-br ${config.bgGradient}`} opacity-95`
-                          : ''
+                        ? `ring-4 ring-${config.accentColor.split('-')[1]}-300 ${isDark ? 'bg-slate-800' : `bg-gradient-to-br ${config.bgGradient}`} opacity-95`
+                        : ''
                         } ${isDark ? 'bg-slate-900/60 border-slate-700' : `bg-gradient-to-br ${config.bgGradient} ${config.borderColor}`}`}
                     >
                       {/* Header */}
@@ -289,6 +289,7 @@ export default function TaskBoard({ tasks, setTasks, onEdit, onDelete, onComplet
                       {/* Tasks */}
                       <div className="space-y-2.5">
                         {((tasks[q.id] || [])
+                          .filter((t) => t.status !== 'completed')
                           .filter((t) => {
                             if (filter === 'All') return true;
                             if (filter === 'Today') {
