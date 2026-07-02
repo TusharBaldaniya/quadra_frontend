@@ -12,9 +12,9 @@ import Snackbar from "./component/Snackbar";
 import { cacheTasks, getCachedTasks, enqueueMutation, flushQueue, onOnline } from "./services/offline";
 
 export default function App() {
-  // const [deferredPrompt, setDeferredPrompt] = useState(null);
-  // const [isIOS, setIsIOS] = useState(false);
-  // const [isStandalone, setIsStandalone] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [isIOS, setIsIOS] = useState(false);
+  const [isStandalone, setIsStandalone] = useState(false);
   const [showInstallInstructions, setShowInstallInstructions] = useState(false);
   const [alerts, setAlerts] = useState([]);
 
@@ -70,12 +70,12 @@ export default function App() {
   useEffect(() => {
     // Detect iOS devices
     const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    // setIsIOS(iOS);
+    setIsIOS(iOS);
     
     // Check if app is already installed (standalone mode)
-    // const standalone = window.matchMedia('(display-mode: standalone)').matches || 
-    //                  window.navigator.standalone === true;
-    // setIsStandalone(standalone);
+    const standalone = window.matchMedia('(display-mode: standalone)').matches || 
+                     window.navigator.standalone === true;
+    setIsStandalone(standalone);
     
     // No user-facing alert for standalone to reduce noise
 
@@ -83,7 +83,7 @@ export default function App() {
       addAlert("🎉 PWA install prompt is available!", 'success');
       console.log("PWA install prompt triggered");
       e.preventDefault();
-      // setDeferredPrompt(e);
+      setDeferredPrompt(e);
     };
     
     window.addEventListener("beforeinstallprompt", handler);
@@ -184,7 +184,33 @@ export default function App() {
     };
   }, [showModal, showEditModal, showWelcome, showInstallInstructions]);
 
-  // Install flow handlers removed from UI for mobile-first shell.
+  const handleInstallClick = async () => {
+    if (isIOS) {
+      setShowInstallInstructions(true);
+      return;
+    }
+    
+    if (!deferredPrompt) {
+      addAlert("Install prompt is not available yet. Please use browser menu.", "info");
+      return;
+    }
+
+    try {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      console.log(`User response to the install prompt: ${outcome}`);
+      if (outcome === 'accepted') {
+        addAlert("Thank you for installing!", "success");
+      }
+      setDeferredPrompt(null);
+    } catch (err) {
+      console.error("Error during installation prompt:", err);
+    }
+  };
+
+  const handleMobileInstallFallback = () => {
+    addAlert("To install: Tap your browser's menu (three dots) and select 'Add to Home screen' or 'Install App'.", "info");
+  };
 
 
   // Keyboard shortcut: Ctrl+N / Cmd+N
@@ -529,6 +555,11 @@ export default function App() {
       onFabClick={() => setShowModal(true)}
       showFab={currentTab === 'board' && !showModal && !showEditModal}
       theme={theme}
+      isStandalone={isStandalone}
+      isIOS={isIOS}
+      deferredPrompt={deferredPrompt}
+      onInstallClick={handleInstallClick}
+      onMobileInstall={handleMobileInstallFallback}
     >
       <motion.div key={currentTab} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.15 }}>
         {currentTab === 'board' && (

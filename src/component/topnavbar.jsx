@@ -13,13 +13,13 @@ export default function Navbar({ user = "User", onInstallClick, deferredPrompt, 
           animate={{ x: 0, opacity: 1 }}
           transition={{ duration: 0.6 }}
         >
-          <motion.div 
-            className="bg-gradient-to-br from-blue-500 to-purple-600 text-white w-12 h-12 flex items-center justify-center rounded-2xl shadow-lg"
+          <motion.img 
+            src="/dummy.png"
+            alt="Logo"
+            className="w-12 h-12 rounded-2xl object-cover shadow-lg border border-slate-100"
             whileHover={{ rotate: 360, scale: 1.1 }}
             transition={{ duration: 0.6 }}
-          >
-            <FiTarget className="text-xl" />
-          </motion.div>
+          />
           <div>
             <h1 className="text-gray-800 font-bold text-xl sm:text-2xl bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
               Focus First Task Manager
