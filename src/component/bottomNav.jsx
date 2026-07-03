@@ -1,19 +1,17 @@
-import React from "react";
-import { FiHome, FiGrid, FiClock, FiPieChart, FiUser } from "react-icons/fi";
+import { FiHome, FiGrid, FiClock, FiPieChart } from "react-icons/fi";
 
 const tabs = [
   { id: "today", label: "Today", icon: FiHome },
   { id: "board", label: "Matrix", icon: FiGrid },
   { id: "focus_tab", label: "Focus", icon: FiClock },
   { id: "insights", label: "Insights", icon: FiPieChart },
-  { id: "profile", label: "Profile", icon: FiUser },
 ];
 
 export default function BottomNav({ currentTab, onTabChange, theme = 'light' }) {
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-20" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
       <div className="mx-auto max-w-3xl w-full px-3 pb-3 pt-2">
-        <div className="grid grid-cols-5 gap-0.5 p-1.5 rounded-3xl backdrop-blur-xl shadow-xl border border-border-subtle bg-background-surface/80">
+        <div className="grid grid-cols-4 gap-0.5 p-1.5 rounded-3xl backdrop-blur-xl shadow-xl border border-border-subtle bg-background-surface/80">
         {tabs.map((t) => {
           const Icon = t.icon;
           const active = currentTab === t.id;

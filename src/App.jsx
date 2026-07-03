@@ -817,7 +817,17 @@ export default function App() {
   }
 
   if (!user) {
-    return <AuthPage onAuthSuccess={(u) => setUser(u)} theme={theme} />;
+    return (
+      <AuthPage
+        onAuthSuccess={(u) => setUser(u)}
+        theme={theme}
+        deferredPrompt={deferredPrompt}
+        isStandalone={isStandalone}
+        isIOS={isIOS}
+        onInstallClick={handleInstallClick}
+        onMobileInstall={handleMobileInstallFallback}
+      />
+    );
   }
 
   return (
@@ -845,6 +855,7 @@ export default function App() {
       onInstallClick={handleInstallClick}
       onMobileInstall={handleMobileInstallFallback}
       user={user}
+      streak={streak}
       onLogout={handleLogout}
     >
       <motion.div key={currentTab} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.15 }}>

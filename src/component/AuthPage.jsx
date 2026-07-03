@@ -3,7 +3,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FiMail, FiLock, FiUser, FiEye, FiEyeOff, FiActivity } from 'react-icons/fi';
 import { api } from '../services/api';
 
-export default function AuthPage({ onAuthSuccess, theme = 'light' }) {
+export default function AuthPage({ 
+  onAuthSuccess, 
+  theme = 'light',
+  deferredPrompt = null,
+  isStandalone = false,
+  isIOS = false,
+  onInstallClick,
+  onMobileInstall
+}) {
   const isDark = theme === 'dark';
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
@@ -43,6 +51,48 @@ export default function AuthPage({ onAuthSuccess, theme = 'light' }) {
     <div className={`min-h-screen w-full flex items-center justify-center p-4 overflow-hidden relative ${
       isDark ? 'bg-slate-950 text-slate-100' : 'bg-gradient-to-b from-slate-50 to-slate-100 text-slate-900'
     }`}>
+      {/* Floating Install App Option */}
+      {!isStandalone && (
+        <div className="absolute top-6 right-6 z-20">
+          {deferredPrompt && !isIOS && (
+            <button
+              onClick={onInstallClick}
+              className={`px-4 py-2 rounded-2xl text-xs font-bold border transition-all shadow-md active:scale-95 ${
+                isDark 
+                  ? 'bg-slate-900/60 border-white/10 text-white hover:bg-slate-800' 
+                  : 'bg-white/80 border-slate-200 text-slate-900 hover:bg-slate-100'
+              }`}
+            >
+              Install App
+            </button>
+          )}
+          {isIOS && (
+            <button
+              onClick={onInstallClick}
+              className={`px-4 py-2 rounded-2xl text-xs font-bold border transition-all shadow-md active:scale-95 ${
+                isDark 
+                  ? 'bg-slate-900/60 border-white/10 text-white hover:bg-slate-800' 
+                  : 'bg-white/80 border-slate-200 text-slate-900 hover:bg-slate-100'
+              }`}
+            >
+              Install App
+            </button>
+          )}
+          {!deferredPrompt && !isIOS && (
+            <button
+              onClick={onMobileInstall}
+              className={`px-4 py-2 rounded-2xl text-xs font-bold border transition-all shadow-md active:scale-95 ${
+                isDark 
+                  ? 'bg-slate-900/60 border-white/10 text-white hover:bg-slate-800' 
+                  : 'bg-white/80 border-slate-200 text-slate-900 hover:bg-slate-100'
+              }`}
+            >
+              Install App
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Background ambient glowing blobs */}
       <div className="absolute top-1/4 left-1/4 w-80 h-80 bg-blue-500/10 rounded-full blur-[100px] pointer-events-none" />
       <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-purple-500/10 rounded-full blur-[100px] pointer-events-none" />

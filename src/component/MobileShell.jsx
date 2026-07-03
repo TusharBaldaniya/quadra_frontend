@@ -1,5 +1,4 @@
-import React from "react";
-import { FiPlus, FiDownload } from "react-icons/fi";
+import { FiPlus } from "react-icons/fi";
 import BottomNav from "./bottomNav";
 
 export default function MobileShell({
@@ -15,42 +14,47 @@ export default function MobileShell({
   isIOS = false,
   deferredPrompt = null,
   onInstallClick,
-  onMobileInstall
+  onMobileInstall,
+  user,
+  streak
 }) {
   return (
     <div className="bg-background-deep text-text-primary min-h-screen flex flex-col font-body transition-colors duration-200">
       {/* Top bar */}
-      <header className="sticky top-0 z-20 backdrop-blur-md bg-background-surface/75 border-b border-border-subtle" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
-        <div className="mx-auto max-w-3xl w-full px-4 py-3 flex items-center justify-between">
+      <header className="sticky top-0 z-20 w-full px-3 pt-3" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 8px)' }}>
+        <div className="mx-auto max-w-3xl w-full px-4 py-2.5 flex items-center justify-between rounded-3xl border border-white/[0.06] bg-slate-900/60 backdrop-blur-2xl shadow-xl shadow-black/20">
           <div className="flex items-center gap-3 min-w-0">
-            <img
-              src="/quadra-symbol.png"
-              alt="Logo"
-              className="w-10 h-10 rounded-xl object-contain bg-white p-1 border border-border-subtle flex-shrink-0 shadow-sm"
-            />
+            {/* Logo in a gradient glass circle */}
+            <div className="relative flex-shrink-0 w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-500/15 to-purple-500/15 p-1 border border-white/10 flex items-center justify-center shadow-inner">
+              <img
+                src="/quadra-symbol.png"
+                alt="Logo"
+                className="w-full h-full object-contain filter drop-shadow-[0_2px_8px_rgba(99,102,241,0.3)]"
+              />
+            </div>
+            
             <div className="min-w-0">
-              <h1 className="text-xl font-bold font-display bg-gradient-to-r from-blue-500 to-brand-primary bg-clip-text text-transparent truncate">
+              <h1 className="text-base font-extrabold font-display bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-transparent truncate tracking-tight">
                 {title}
               </h1>
               {subtitle ? (
-                <p className="text-xs text-text-muted truncate font-medium">{subtitle}</p>
+                <p className="text-[10px] text-text-muted/80 truncate font-semibold uppercase tracking-wider leading-none mt-0.5">{subtitle}</p>
               ) : null}
             </div>
           </div>
 
           {/* Right side header actions */}
-          <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+          <div className="flex items-center gap-3 flex-shrink-0 ml-2">
             {!isStandalone && (
-              <>
+              <div className="flex items-center gap-1.5">
                 {/* Standard install prompt for Android/Desktop */}
                 {deferredPrompt && !isIOS && (
                   <button
                     onClick={onInstallClick}
-                    className="bg-gradient-to-r from-blue-500 to-brand-primary text-white px-3.5 py-1.5 rounded-xl hover:shadow-lg transition-all duration-300 flex items-center gap-1.5 text-xs font-semibold shadow-md active:scale-95"
+                    className="bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded-xl transition-all text-[11px] font-bold shadow-sm active:scale-95 border border-white/5"
                     title="Install Quadra App"
                   >
-                    <FiDownload size={14} />
-                    <span>Install App</span>
+                    Install
                   </button>
                 )}
 
@@ -58,11 +62,10 @@ export default function MobileShell({
                 {isIOS && (
                   <button
                     onClick={onInstallClick}
-                    className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-3.5 py-1.5 rounded-xl hover:shadow-lg transition-all duration-300 flex items-center gap-1.5 text-xs font-semibold shadow-md active:scale-95"
+                    className="bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded-xl transition-all text-[11px] font-bold shadow-sm active:scale-95 border border-white/5"
                     title="How to install on iPhone"
                   >
-                    <FiDownload size={14} />
-                    <span>Install</span>
+                    Install
                   </button>
                 )}
 
@@ -70,14 +73,36 @@ export default function MobileShell({
                 {!deferredPrompt && !isIOS && (
                   <button
                     onClick={onMobileInstall}
-                    className="bg-gradient-to-r from-gray-500 to-slate-600 text-white px-3.5 py-1.5 rounded-xl hover:shadow-lg transition-all duration-300 flex items-center gap-1.5 text-xs font-semibold shadow-md active:scale-95"
+                    className="bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded-xl transition-all text-[11px] font-bold shadow-sm active:scale-95 border border-white/5"
                     title="Try to install app"
                   >
-                    <FiDownload size={14} />
-                    <span>Install</span>
+                    Install
                   </button>
                 )}
-              </>
+              </div>
+            )}
+
+            {/* Streak count */}
+            {streak > 0 && (
+              <div className="flex items-center gap-1 bg-amber-500/10 text-amber-400 px-3 py-1 rounded-full text-xs font-bold border border-amber-500/20 shadow-[0_0_12px_rgba(245,158,11,0.15)] animate-pulse select-none">
+                <span>🔥</span>
+                <span>{streak}</span>
+              </div>
+            )}
+
+            {/* Profile Avatar button */}
+            {user && (
+              <button
+                onClick={() => onTabChange?.('profile')}
+                className={`w-9 h-9 rounded-full bg-gradient-to-tr from-cyan-500 via-blue-500 to-purple-600 text-white flex items-center justify-center font-extrabold text-sm shadow-[0_0_15px_rgba(99,102,241,0.25)] border-2 ${
+                  currentTab === 'profile'
+                    ? 'border-white ring-2 ring-purple-500/50 scale-95'
+                    : 'border-white/15 hover:border-white/40'
+                } active:scale-90 hover:scale-105 transition-all duration-300`}
+                title="View Profile"
+              >
+                {(user.name || 'U').charAt(0).toUpperCase()}
+              </button>
             )}
           </div>
         </div>

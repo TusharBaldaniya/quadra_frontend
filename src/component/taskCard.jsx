@@ -56,7 +56,7 @@ export default function TaskCard({ task, index, quadrant, onEdit, onDelete, onCo
   const [showQuadrantMenu, setShowQuadrantMenu] = useState(false);
   const [menuPlacement, setMenuPlacement] = useState('below'); // 'below' | 'above'
   const [dragEnabled, setDragEnabled] = useState(false);
-  
+
   const menuAnchorRef = useRef(null);
   const quadMenuAnchorRef = useRef(null);
   const startXRef = useRef(0);
@@ -88,7 +88,7 @@ export default function TaskCard({ task, index, quadrant, onEdit, onDelete, onCo
 
   const isDueToday = task.due && new Date(task.due).toDateString() === new Date().toDateString();
   const priority = priorityConfig[task.priority] || priorityConfig.Medium;
-  
+
   const relativeDueLabel = (() => {
     if (!task.due) return null;
     const now = new Date();
@@ -155,18 +155,17 @@ export default function TaskCard({ task, index, quadrant, onEdit, onDelete, onCo
 
             {/* Core Card Content */}
             <div
-              className={`group relative p-3 pl-4 rounded-2xl bg-background-surface text-text-primary shadow-sm border-l-4 ${
-                snapshot.isDragging
+              className={`group relative p-3 pl-4 rounded-2xl bg-background-surface text-text-primary shadow-sm border-l-4 ${snapshot.isDragging
                   ? "shadow-lg ring-2 ring-brand-primary/60 border-l-purple-500 scale-[1.02]"
                   : dragEnabled
                     ? "ring-2 ring-amber-500/50 scale-[1.01]"
                     : "hover:shadow-md transition-all duration-200"
-              } ${quadrantColors[quadrant]} border border-border-subtle`}
-              style={{ 
-                transform: `translateX(${dx}px)`, 
+                } ${quadrantColors[quadrant]} border border-border-subtle`}
+              style={{
+                transform: `translateX(${dx}px)`,
                 transition: swiping ? 'none' : 'transform 160ms ease-out, box-shadow 200ms, border-color 200ms'
               }}
-              
+
               onClick={(e) => {
                 if (Math.abs(dx) > 5) return;
                 // If clicked on menus or buttons, don't toggle expand
@@ -217,7 +216,7 @@ export default function TaskCard({ task, index, quadrant, onEdit, onDelete, onCo
                 const delta = dx;
                 setSwiping(false);
                 setDx(0);
-                
+
                 if (delta > threshold && !dragEnabled) {
                   onComplete && onComplete(task, quadrant);
                   return;
@@ -241,12 +240,12 @@ export default function TaskCard({ task, index, quadrant, onEdit, onDelete, onCo
                   <span className="text-sm pt-0.5" role="img" aria-label="quadrant">
                     {quadrantEmojis[quadrant]}
                   </span>
-                  
+
                   <div className="min-w-0 flex-1">
                     <h3 className="font-bold font-display text-sm leading-tight text-text-primary break-words">
                       {task.title}
                     </h3>
-                    
+
                     {/* Subtitle details */}
                     <div className="flex items-center flex-wrap gap-x-2 gap-y-0.5 text-[10px] sm:text-xs font-semibold text-text-muted mt-1">
                       <span className={isDark ? 'text-slate-400' : priority.textColor}>
@@ -268,11 +267,10 @@ export default function TaskCard({ task, index, quadrant, onEdit, onDelete, onCo
                 <div className="flex items-center gap-1.5 flex-shrink-0 action-menu">
                   {task.due && (
                     <div
-                      className={`flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[9px] font-bold ${
-                        isDueToday 
-                          ? 'bg-rose-500/10 text-rose-500 animate-pulse' 
+                      className={`flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[9px] font-bold ${isDueToday
+                          ? 'bg-rose-500/10 text-rose-500 animate-pulse'
                           : isDark ? 'bg-slate-800 text-slate-400' : 'bg-slate-100 text-slate-500'
-                      }`}
+                        }`}
                     >
                       <FiClock size={10} />
                       <span>{relativeDueLabel}</span>
@@ -404,8 +402,42 @@ export default function TaskCard({ task, index, quadrant, onEdit, onDelete, onCo
                       </div>
                     )}
 
+                    {/* Quadrant Quick Switcher */}
+                    <div className="mb-3.5 space-y-1.5">
+                      <span className="text-[9px] font-extrabold text-text-muted uppercase tracking-wider block">Move Task</span>
+                      <div className="flex gap-1.5 flex-wrap">
+                        {[
+                          { id: 'q1', label: 'Q1 Do First', emoji: '🔥', tooltip: 'Urgent & Important' },
+                          { id: 'q2', label: 'Q2 Schedule', emoji: '🎯', tooltip: 'Important, Not Urgent' },
+                          { id: 'q3', label: 'Q3 Delegate', emoji: '⏰', tooltip: 'Urgent, Not Important' },
+                          { id: 'q4', label: 'Q4 Eliminate', emoji: '✅', tooltip: 'Not Urgent & Not Important' },
+                        ].map(q => {
+                          const active = quadrant === q.id;
+                          return (
+                            <button
+                              key={q.id}
+                              onClick={() => {
+                                if (active) return;
+                                onMove && onMove(task, quadrant, q.id);
+                              }}
+                              className={`px-2.5 py-1.5 rounded-xl text-[10px] font-bold transition-all flex items-center gap-1 active:scale-95 border ${active
+                                  ? 'bg-brand-primary text-white border-brand-primary shadow-xs'
+                                  : isDark
+                                    ? 'bg-slate-800/80 border-slate-700 text-slate-300 hover:bg-slate-700 hover:text-white'
+                                    : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
+                                }`}
+                              title={q.tooltip}
+                            >
+                              <span>{q.emoji}</span>
+                              <span>{q.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
                     {/* Expanded Action Toolbar */}
-                    <div className="flex items-center gap-2 border-t border-border-subtle/40 pt-2">
+                    {/* <div className="flex items-center gap-2 border-t border-border-subtle/40 pt-2.5">
                       <button
                         onClick={() => onStartFocus && onStartFocus(task)}
                         className="px-3 py-1.5 bg-brand-primary/10 text-brand-primary text-[10px] font-extrabold rounded-xl hover:bg-brand-primary/20 flex items-center gap-1 active:scale-95 transition-all"
@@ -437,7 +469,7 @@ export default function TaskCard({ task, index, quadrant, onEdit, onDelete, onCo
                         <FiTrash2 size={10} />
                         <span>Delete</span>
                       </button>
-                    </div>
+                    </div> */}
                   </motion.div>
                 )}
               </AnimatePresence>
