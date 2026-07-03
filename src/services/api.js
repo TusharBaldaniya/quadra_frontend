@@ -42,6 +42,26 @@ export const api = {
   addDependency: (data) => request('/tasks/dependencies', { method: 'POST', body: JSON.stringify(data) }),
   getDependencies: (taskId) => request(`/tasks/${taskId}/dependencies`),
   removeDependency: (depId) => request(`/tasks/dependencies/${depId}`, { method: 'DELETE' }),
+
+  // AI Assistant
+  getAiSubtasks: (title, description) =>
+    request('/ai/subtasks', { method: 'POST', body: JSON.stringify({ title, description }) }),
+  analyzeTask: (text) =>
+    request('/ai/analyze', { method: 'POST', body: JSON.stringify({ text }) }),
+  getAiInsights: () =>
+    request('/ai/insights'),
+  
+  // Focus Tracking
+  createFocusSession: (taskId, duration) =>
+    request('/focus', { method: 'POST', body: JSON.stringify({ taskId, duration }) }),
+  getFocusStats: () => request('/focus/stats'),
+  getFocusSessions: () => request('/focus'),
+  getVapidPublicKey: () => request('/notifications/public-key'),
+  subscribeNotifications: (sub) => request('/notifications/subscribe', { method: 'POST', body: JSON.stringify(sub) }),
+  getPartnerStatus: () => request('/gamification/partner/status'),
+  linkPartner: (partnerId) => request('/gamification/partner/link', { method: 'POST', body: JSON.stringify({ partnerId }) }),
+  sendPartnerCheer: (message) => request('/gamification/partner/cheer', { method: 'POST', body: JSON.stringify({ message }) }),
+  getGamificationStats: () => request('/gamification/stats'),
   
   // Analytics
   getSummary: () => request('/analytics/summary'),

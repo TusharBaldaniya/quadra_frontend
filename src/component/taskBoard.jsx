@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { DragDropContext, Droppable } from "@hello-pangea/dnd";
 import TaskCard from "./taskCard";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { FiZap, FiTarget, FiClock, FiCheckCircle, FiPlus } from "react-icons/fi";
 
 const quadrantConfig = {
@@ -9,49 +9,49 @@ const quadrantConfig = {
     title: "Important & Urgent",
     subtitle: "Do First",
     icon: FiZap,
-    gradient: "from-red-500 to-pink-500",
-    bgGradient: "from-red-50 to-pink-50",
-    borderColor: "border-red-200",
-    textColor: "text-red-700",
-    accentColor: "bg-red-500",
+    gradient: "from-rose-500 to-red-600",
+    bgGradient: "from-rose-50 to-red-50 dark:from-red-950/10 dark:to-rose-950/20",
+    borderColor: "border-rose-100 dark:border-red-900/30",
+    textColor: "text-rose-700 dark:text-red-400",
+    accentColor: "bg-rose-500",
     description: "Crisis, emergencies, deadline-driven projects"
   },
   q2: {
     title: "Important & Not Urgent",
     subtitle: "Schedule",
     icon: FiTarget,
-    gradient: "from-blue-500 to-indigo-500",
-    bgGradient: "from-blue-50 to-indigo-50",
-    borderColor: "border-blue-200",
-    textColor: "text-blue-700",
-    accentColor: "bg-blue-500",
+    gradient: "from-violet-500 to-indigo-600",
+    bgGradient: "from-violet-50 to-indigo-50 dark:from-indigo-950/10 dark:to-violet-950/20",
+    borderColor: "border-indigo-100 dark:border-indigo-900/30",
+    textColor: "text-indigo-700 dark:text-indigo-400",
+    accentColor: "bg-indigo-500",
     description: "Planning, prevention, relationship building"
   },
   q3: {
     title: "Not Important & Urgent",
     subtitle: "Delegate",
     icon: FiClock,
-    gradient: "from-yellow-500 to-orange-500",
-    bgGradient: "from-yellow-50 to-orange-50",
-    borderColor: "border-yellow-200",
-    textColor: "text-yellow-700",
-    accentColor: "bg-yellow-500",
+    gradient: "from-amber-500 to-orange-600",
+    bgGradient: "from-amber-50 to-orange-50 dark:from-amber-950/10 dark:to-orange-950/20",
+    borderColor: "border-amber-100 dark:border-amber-900/30",
+    textColor: "text-amber-700 dark:text-amber-400",
+    accentColor: "bg-amber-500",
     description: "Interruptions, some calls, some meetings"
   },
   q4: {
     title: "Not Important & Not Urgent",
     subtitle: "Eliminate",
     icon: FiCheckCircle,
-    gradient: "from-green-500 to-emerald-500",
-    bgGradient: "from-green-50 to-emerald-50",
-    borderColor: "border-green-200",
-    textColor: "text-green-700",
-    accentColor: "bg-green-500",
+    gradient: "from-emerald-500 to-green-600",
+    bgGradient: "from-emerald-50 to-green-50 dark:from-green-950/10 dark:to-emerald-950/20",
+    borderColor: "border-emerald-100 dark:border-emerald-900/30",
+    textColor: "text-emerald-700 dark:text-emerald-400",
+    accentColor: "bg-emerald-500",
     description: "Time wasters, pleasant activities, some mail"
   },
 };
 
-export default function TaskBoard({ tasks, setTasks, onEdit, onDelete, onComplete, onMoveTask, theme = 'light' }) {
+export default function TaskBoard({ tasks, setTasks, onEdit, onDelete, onComplete, onMoveTask, onStartFocus, theme = 'light' }) {
   const isDark = theme === 'dark';
   const [filter, setFilter] = useState('All'); // All | Today | High
   const [compact, setCompact] = useState(true);
@@ -215,27 +215,30 @@ export default function TaskBoard({ tasks, setTasks, onEdit, onDelete, onComplet
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`px-3 py-1 rounded-full text-sm border ${filter === f ? 'bg-blue-600 text-white border-blue-600' : (isDark ? 'border-slate-600 text-slate-200' : 'border-slate-300 text-slate-700')
-                }`}
+              className={`px-4 py-1.5 rounded-full text-xs font-semibold border transition-all duration-200 ${
+                filter === f
+                  ? 'bg-brand-primary text-white border-brand-primary shadow-sm shadow-purple-500/20'
+                  : 'border-border-subtle bg-background-surface/40 text-text-muted hover:text-text-primary hover:bg-background-elevated'
+              }`}
             >
               {f}
             </button>
           ))}
         </div>
         <div className="flex items-center gap-2">
-          <label className={`text-sm ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>Compact</label>
+          <label className="text-xs font-semibold text-text-muted">Compact</label>
           <button
             onClick={() => setCompact((v) => !v)}
-            className={`w-10 h-6 rounded-full border transition-colors ${compact ? 'bg-blue-600 border-blue-600' : (isDark ? 'bg-slate-700 border-slate-600' : 'bg-slate-200 border-slate-300')}`}
+            className={`w-10 h-6 rounded-full border transition-all duration-200 flex items-center p-0.5 ${compact ? 'bg-brand-primary border-brand-primary' : 'bg-background-elevated border-border-subtle'}`}
             aria-pressed={compact}
           >
-            <span className={`block w-5 h-5 bg-white rounded-full transition-transform ${compact ? 'translate-x-4' : 'translate-x-1'}`} />
+            <span className={`block w-4.5 h-4.5 bg-white rounded-full transition-transform duration-200 ${compact ? 'translate-x-4' : 'translate-x-0.5'}`} />
           </button>
         </div>
       </div>
 
       <DragDropContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-        <div className={`grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-5 max-w-6xl mx-auto ${isDark ? 'text-slate-100' : 'text-gray-800'}`}>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-5 max-w-6xl mx-auto text-text-primary">
           {quadrants.map((q, index) => {
             const config = quadrantConfig[q.id];
             const Icon = config.icon;
@@ -254,24 +257,25 @@ export default function TaskBoard({ tasks, setTasks, onEdit, onDelete, onComplet
                     <div
                       ref={provided.innerRef}
                       {...provided.droppableProps}
-                      className={`relative ${compact ? 'p-2.5' : 'p-3 sm:p-6'} rounded-3xl ${compact ? 'min-h-[150px]' : 'min-h-[180px] sm:min-h-[260px]'} shadow-lg border ${snapshot.isDraggingOver
-                        ? `ring-4 ring-${config.accentColor.split('-')[1]}-300 ${isDark ? 'bg-slate-800' : `bg-gradient-to-br ${config.bgGradient}`} opacity-95`
-                        : ''
-                        } ${isDark ? 'bg-slate-900/60 border-slate-700' : `bg-gradient-to-br ${config.bgGradient} ${config.borderColor}`}`}
+                      className={`relative ${compact ? 'p-3' : 'p-4 sm:p-6'} rounded-3xl ${compact ? 'min-h-[150px]' : 'min-h-[180px] sm:min-h-[260px]'} transition-all duration-300 shadow-sm border ${
+                        snapshot.isDraggingOver
+                          ? `ring-2 ring-brand-primary/50 shadow-lg ${isDark ? 'bg-background-elevated' : 'bg-white'}`
+                          : `bg-gradient-to-br ${config.bgGradient} ${config.borderColor}`
+                      }`}
                     >
                       {/* Header */}
                       <div className={`flex items-center justify-between ${compact ? 'mb-2' : 'mb-3 sm:mb-6'}`}>
                         <div className="flex items-center gap-3">
                           <div
-                            className={`${compact ? 'w-8 h-8' : 'w-9 h-9 sm:w-10 sm:h-10'} rounded-2xl bg-gradient-to-r ${config.gradient} flex items-center justify-center shadow-lg transition-transform duration-300 hover:rotate-360`}
+                            className={`${compact ? 'w-8 h-8' : 'w-9 h-9 sm:w-10 sm:h-10'} rounded-xl bg-gradient-to-r ${config.gradient} flex items-center justify-center shadow-lg transition-transform duration-300 hover:rotate-360`}
                           >
                             <Icon className={`${compact ? 'text-base' : 'text-lg sm:text-xl'} text-white`} />
                           </div>
                           <div>
-                            <h2 className={`font-bold ${compact ? 'text-sm' : 'text-base sm:text-lg'} ${isDark ? 'text-slate-100' : config.textColor}`}>
+                            <h2 className={`font-display font-bold ${compact ? 'text-sm' : 'text-base sm:text-lg'} ${isDark ? 'text-text-primary' : config.textColor}`}>
                               {config.title}
                             </h2>
-                            <p className={`font-medium ${compact ? 'text-[11px]' : 'text-xs sm:text-sm'} ${isDark ? 'text-slate-300' : config.textColor} opacity-80`}>
+                            <p className={`font-medium ${compact ? 'text-[11px]' : 'text-xs sm:text-sm'} ${isDark ? 'text-text-muted' : config.textColor} opacity-80`}>
                               {config.subtitle}
                             </p>
                           </div>
@@ -282,39 +286,51 @@ export default function TaskBoard({ tasks, setTasks, onEdit, onDelete, onComplet
                       </div>
 
                       {/* Description */}
-                      <p className={`text-xs sm:text-sm ${isDark ? 'text-slate-300' : config.textColor} opacity-70 mb-3 sm:mb-4`}>
+                      <p className={`text-xs ${isDark ? 'text-text-muted/80' : config.textColor} opacity-80 mb-3 sm:mb-4`}>
                         {config.description}
                       </p>
 
                       {/* Tasks */}
                       <div className="space-y-2.5">
-                        {((tasks[q.id] || [])
-                          .filter((t) => t.status !== 'completed')
-                          .filter((t) => {
-                            if (filter === 'All') return true;
-                            if (filter === 'Today') {
-                              if (!t.due) return false;
-                              const d = new Date(t.due);
-                              const now = new Date();
-                              return d.toDateString() === now.toDateString();
-                            }
-                            if (filter === 'High') return t.priority === 'High';
-                            return true;
-                          }))
-                          .map((task, taskIndex) => (
-                            <TaskCard
-                              key={task.id}
-                              task={task}
-                              index={taskIndex}
-                              quadrant={q.id}
-                              onEdit={onEdit}
-                              onDelete={onDelete}
-                              onComplete={onComplete}
-                              onMove={onMoveTask}
-                              theme={theme}
-                              compact={compact}
-                            />
-                          ))}
+                        <AnimatePresence initial={false}>
+                          {((tasks[q.id] || [])
+                            .filter((t) => t.status !== 'completed')
+                            .filter((t) => {
+                              if (filter === 'All') return true;
+                              if (filter === 'Today') {
+                                if (!t.due) return false;
+                                const d = new Date(t.due);
+                                const now = new Date();
+                                return d.toDateString() === now.toDateString();
+                              }
+                              if (filter === 'High') return t.priority === 'High';
+                              return true;
+                            }))
+                            .map((task, taskIndex) => (
+                              <motion.div
+                                key={task.id}
+                                layoutId={task.id}
+                                layout="position"
+                                initial={{ opacity: 0, y: 15 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.15 } }}
+                                transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                              >
+                                <TaskCard
+                                  task={task}
+                                  index={taskIndex}
+                                  quadrant={q.id}
+                                  onEdit={onEdit}
+                                  onDelete={onDelete}
+                                  onComplete={onComplete}
+                                  onMove={onMoveTask}
+                                  onStartFocus={onStartFocus}
+                                  theme={theme}
+                                  compact={compact}
+                                />
+                              </motion.div>
+                            ))}
+                        </AnimatePresence>
                         {provided.placeholder}
                       </div>
 

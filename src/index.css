@@ -3,7 +3,56 @@
 @tailwind utilities;
 
 :root {
-  --app-bg: #f8fafc;
+  /* Light Theme */
+  --bg-deep: 220 33% 98%;         /* #f8fafc */
+  --bg-surface: 0 0% 100%;       /* #ffffff */
+  --bg-elevated: 210 40% 96.1%;   /* #f1f5f9 */
+  
+  --brand-primary: 260 90% 65%;
+  --brand-secondary: 210 95% 55%;
+  
+  --color-success: 150 80% 40%;
+  --color-error: 0 85% 60%;
+  
+  --text-primary: 222.2 47.4% 11.2%; /* text-slate-900 */
+  --text-muted: 215.4 16.3% 46.9%;   /* text-slate-500 */
+  --text-darker: 215 20% 65%;
+  
+  --border-subtle: 214.3 31.8% 91.4%;
+  --glass-effect: rgba(255, 255, 255, 0.4);
+  --glass-blur: blur(12px);
+  
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  
+  --font-display: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  
+  --app-bg: hsl(var(--bg-deep));
+}
+
+:root.dark {
+  /* Dark Theme */
+  --bg-deep: 220 20% 6%;         /* #0C0E12 */
+  --bg-surface: 220 18% 10%;     /* #14181F */
+  --bg-elevated: 220 16% 15%;    /* #1F2530 */
+  
+  --brand-primary: 260 90% 65%;
+  --brand-secondary: 210 95% 55%;
+  
+  --color-success: 150 80% 45%;
+  --color-error: 0 85% 60%;
+  
+  --text-primary: 210 20% 98%;    /* text-slate-100 */
+  --text-muted: 218 12% 65%;      /* text-slate-400 */
+  --text-darker: 218 8% 40%;
+  
+  --border-subtle: 220 14% 18%;
+  --glass-effect: hsla(220, 18%, 10%, 0.65);
+  --glass-blur: blur(16px);
+  
+  --app-bg: hsl(var(--bg-deep));
 }
 
 html,
@@ -18,9 +67,7 @@ body {
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-tap-highlight-color: transparent;

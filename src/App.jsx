@@ -1,17 +1,17 @@
-// File: src/App.jsx
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import TodayView from "./component/TodayView";
+import Insights from "./component/Insights";
 import TaskBoard from "./component/taskBoard";
 import TaskModal from "./component/taskModal";
 import TaskEditModal from "./component/taskEditModal";
 import { api } from "./services/api";
 import MobileShell from "./component/MobileShell";
-import CompletedList from "./component/CompletedList";
-import Analytics from "./component/Analytics";
 import Snackbar from "./component/Snackbar";
 import { cacheTasks, getCachedTasks, enqueueMutation, flushQueue, onOnline } from "./services/offline";
 import AuthPage from "./component/AuthPage";
 import { FiLogOut } from "react-icons/fi";
+import FocusMode from "./features/focus/FocusMode";
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -57,22 +57,170 @@ export default function App() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editTask, setEditTask] = useState(null);
   const [editQuadrant, setEditQuadrant] = useState(null);
-  const [currentTab, setCurrentTab] = useState('board');
+  const [currentTab, setCurrentTab] = useState('today');
   const [theme, setTheme] = useState(() => {
     const stored = localStorage.getItem('theme');
     return stored === 'dark' || stored === 'light' ? stored : 'dark';
   }); // 'light' | 'dark'
-  const isDark = theme === 'dark';
   const [weeklyGoal, setWeeklyGoal] = useState(() => {
     const stored = localStorage.getItem('weeklyGoal');
     const num = stored ? parseInt(stored, 10) : 20;
     return Number.isFinite(num) && num > 0 ? num : 20;
   });
 
+  // Focus and Gamification states
+  const [focusTask, setFocusTask] = useState(null);
+  const [xp, setXp] = useState(() => {
+    const stored = localStorage.getItem('quadra_xp');
+    return stored ? parseInt(stored, 10) : 0;
+  });
+  const [level, setLevel] = useState(() => {
+    const stored = localStorage.getItem('quadra_level');
+    return stored ? parseInt(stored, 10) : 1;
+  });
+
+  const [streak, setStreak] = useState(() => {
+    const stored = localStorage.getItem('quadra_streak');
+    return stored ? parseInt(stored, 10) : 0;
+  });
+  const [lastActiveDate, setLastActiveDate] = useState(() => {
+    return localStorage.getItem('quadra_last_active_date') || '';
+  });
+
+  // Partner and Achievements states
+  const [partnerStatus, setPartnerStatus] = useState(null);
+  const [partnerIdInput, setPartnerIdInput] = useState("");
+  const [partnerMessage, setPartnerMessage] = useState("");
+  const [achievements, setAchievements] = useState([]);
+
+  // Fetch gamification and partner stats
+  const refreshProfileStats = async () => {
+    try {
+      const statsRes = await api.getGamificationStats();
+      if (statsRes && statsRes.stats) {
+        setXp(statsRes.stats.xp);
+        setLevel(statsRes.stats.level);
+        setStreak(statsRes.stats.streak);
+      }
+      if (statsRes && statsRes.achievements) {
+        setAchievements(statsRes.achievements);
+      }
+      const partnerRes = await api.getPartnerStatus();
+      setPartnerStatus(partnerRes);
+    } catch (err) {
+      console.error("Failed to load profile stats:", err);
+    }
+  };
+
   useEffect(() => {
-    const bg = theme === 'dark' ? '#0f172a' : '#f8fafc';
+    if (user && currentTab === 'profile') {
+      refreshProfileStats();
+    }
+  }, [user, currentTab]);
+
+  // Push Notifications Setup
+  const setupPushNotifications = async () => {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      console.log('Push notifications are not supported in this browser.');
+      return;
+    }
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') {
+        console.log('Push notification permission denied.');
+        return;
+      }
+      const { publicKey } = await api.getVapidPublicKey();
+      if (!publicKey) return;
+      
+      const subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey),
+      });
+      await api.subscribeNotifications(subscription);
+      console.log('Successfully registered for PWA push notifications.');
+    } catch (e) {
+      console.error('Failed to configure push notifications:', e);
+    }
+  };
+
+  const urlBase64ToUint8Array = (base64String) => {
+    const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+  };
+
+  useEffect(() => {
+    if (user) {
+      setupPushNotifications();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  const updateStreak = () => {
+    const todayStr = new Date().toDateString();
+    if (lastActiveDate === todayStr) return;
+
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toDateString();
+
+    let newStreak = 1;
+    if (lastActiveDate === yesterdayStr) {
+      newStreak = streak + 1;
+    }
+
+    setStreak(newStreak);
+    setLastActiveDate(todayStr);
+    try {
+      localStorage.setItem('quadra_streak', String(newStreak));
+      localStorage.setItem('quadra_last_active_date', todayStr);
+    } catch {}
+
+    addAlert(`🔥 Streak active! ${newStreak} days consecutive!`, 'success');
+  };
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('quadra_xp', String(xp));
+      localStorage.setItem('quadra_level', String(level));
+    } catch {}
+  }, [xp, level]);
+
+  const awardXp = (amount) => {
+    setXp((prevXp) => {
+      const nextXp = prevXp + amount;
+      let currentLvl = level;
+      let newLvl = currentLvl;
+      while (nextXp >= 100 * newLvl * newLvl) {
+        newLvl += 1;
+      }
+      if (newLvl > currentLvl) {
+        setLevel(newLvl);
+        addAlert(`🎉 Level Up! You reached Level ${newLvl}!`, 'success');
+      } else {
+        addAlert(`✨ Earned +${amount} XP!`, 'info');
+      }
+      return nextXp;
+    });
+  };
+
+  useEffect(() => {
+    const bg = theme === 'dark' ? '#0C0E12' : '#f8fafc';
 
     try { localStorage.setItem('theme', theme); } catch { }
+
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
 
     document.documentElement.style.setProperty('--app-bg', bg);
     document.documentElement.style.backgroundColor = bg;
@@ -552,6 +700,11 @@ export default function App() {
       return next;
     });
 
+    // Award XP based on task quadrant weight
+    const xpEarned = quadrant === 'q1' ? 15 : quadrant === 'q2' ? 25 : quadrant === 'q3' ? 10 : 5;
+    awardXp(xpEarned);
+    updateStreak();
+
     const revert = () => {
       setTasks((prev) => {
         const next = { ...prev };
@@ -564,9 +717,26 @@ export default function App() {
         }
         return next;
       });
+      // Revert XP on undo
+      setXp((prevXp) => Math.max(0, prevXp - xpEarned));
     };
     const commit = async () => {
-      try { await api.completeTask(task.id); }
+      try { 
+        const result = await api.completeTask(task.id); 
+        if (result && result.stats) {
+          setXp(result.stats.xp);
+          setLevel(result.stats.level);
+          setStreak(result.stats.streak);
+          if (result.levelUp) {
+            addAlert(`🎉 Level Up! You reached Level ${result.stats.level}!`, 'success');
+          }
+          if (result.newAchievements && result.newAchievements.length > 0) {
+            result.newAchievements.forEach(ach => {
+              addAlert(`🏆 Unlocked Achievement: ${ach}!`, 'success');
+            });
+          }
+        }
+      }
       catch (e) {
         enqueueMutation({ type: 'complete', id: task.id });
         addAlert(`📶 Will complete when online`, 'success');
@@ -654,18 +824,20 @@ export default function App() {
     <MobileShell
       title="Quadra"
       subtitle={
-        currentTab === 'board'
-          ? 'Prioritize your tasks'
-          : currentTab === 'analytics'
-            ? 'Insights and progress'
-            : currentTab === 'completed'
-              ? 'Done tasks'
-              : 'User Profile & Settings'
+        currentTab === 'today'
+          ? 'Your Focus Today'
+          : currentTab === 'board'
+            ? 'Prioritize your tasks'
+            : currentTab === 'focus_tab'
+              ? 'AI Focus Session'
+              : currentTab === 'insights'
+                ? 'Coaching & Progress'
+                : 'User Profile & Accountability'
       }
       currentTab={currentTab}
       onTabChange={setCurrentTab}
       onFabClick={() => setShowModal(true)}
-      showFab={currentTab === 'board' && !showModal && !showEditModal}
+      showFab={(currentTab === 'board' || currentTab === 'today') && !showModal && !showEditModal}
       theme={theme}
       isStandalone={isStandalone}
       isIOS={isIOS}
@@ -676,9 +848,46 @@ export default function App() {
       onLogout={handleLogout}
     >
       <motion.div key={currentTab} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.15 }}>
+        {currentTab === 'today' && (
+          <TodayView
+            tasksByQuadrant={tasks}
+            user={user}
+            onStartFocus={(task) => {
+              setFocusTask(task);
+            }}
+            onComplete={handleComplete}
+            theme={theme}
+          />
+        )}
+
         {currentTab === 'board' && (
           <div className="pb-2">
-            <TaskBoard theme={theme} tasks={tasks} setTasks={setTasks} onEdit={handleEdit} onDelete={handleDelete} onComplete={handleComplete} onMoveTask={handleMoveTask} />
+            <TaskBoard
+              theme={theme}
+              tasks={tasks}
+              setTasks={setTasks}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              onComplete={handleComplete}
+              onMoveTask={handleMoveTask}
+              onStartFocus={(task) => setFocusTask(task)}
+            />
+          </div>
+        )}
+
+        {currentTab === 'focus_tab' && (
+          <div className="flex flex-col items-center justify-center p-8 text-center gap-6">
+            <div className="text-4xl">⏱️</div>
+            <h2 className="text-xl font-bold font-display">Configure Session</h2>
+            <p className="text-xs text-text-muted max-w-xs leading-relaxed">
+              Spend dedicated uninterrupted time on your critical tasks. Select a task or start a general focus session.
+            </p>
+            <button
+              onClick={() => setFocusTask({ title: "Deep Work Focus Session", id: null })}
+              className="py-3.5 px-6 bg-brand-primary text-white font-extrabold text-xs rounded-2xl shadow-lg active:scale-95 transition-all"
+            >
+              Start Planning Focus Session
+            </button>
           </div>
         )}
 
@@ -698,52 +907,196 @@ export default function App() {
           }}
           theme={theme}
         />
-        {currentTab === 'analytics' && (
-          <Analytics tasksByQuadrant={tasks} theme={theme} weeklyGoal={weeklyGoal} onWeeklyGoalChange={setWeeklyGoal} />
+
+        {currentTab === 'insights' && (
+          <Insights theme={theme} />
         )}
-        {currentTab === 'completed' && (
-          <CompletedList tasksByQuadrant={tasks} />
-        )}
-        {currentTab === 'settings' && (
-          <div className="space-y-4 pb-6">
+
+        {currentTab === 'profile' && (
+          <div className="space-y-4 pb-6 font-body text-text-primary">
             {/* User Profile Card */}
-            <div className={`p-4 rounded-2xl border shadow-sm flex items-center gap-4 transition-colors ${isDark ? 'bg-slate-800/80 border-slate-700/80 text-slate-100' : 'bg-white border-slate-200 text-slate-800'
-              }`}>
-              <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-blue-500 to-purple-600 flex items-center justify-center text-white text-xl font-bold shadow-md shadow-blue-500/10 flex-shrink-0">
-                {(user.name || 'U').charAt(0).toUpperCase()}
+            <div className="p-5 rounded-3xl border border-border-subtle bg-background-surface shadow-sm flex flex-col gap-4 transition-colors">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-full bg-gradient-to-r from-blue-500 to-brand-primary flex items-center justify-center text-white text-xl font-bold shadow-md shadow-blue-500/10 flex-shrink-0">
+                  {(user.name || 'U').charAt(0).toUpperCase()}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <h4 className="font-bold text-base font-display truncate">{user.name || 'User'}</h4>
+                    <span className="px-2 py-0.5 rounded-full bg-brand-primary/10 text-brand-primary text-[10px] font-bold border border-brand-primary/20">
+                      Lvl {level}
+                    </span>
+                    {streak > 0 && (
+                      <span className="flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 text-[10px] font-bold border border-amber-500/20">
+                        🔥 {streak}d
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-text-muted truncate">{user.email}</p>
+                </div>
               </div>
-              <div className="min-w-0 flex-1">
-                <h4 className="font-bold text-base truncate">{user.name || 'User'}</h4>
-                <p className={`text-xs truncate ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>{user.email}</p>
-                {user.createdAt && (
-                  <p className={`text-[10px] mt-1 ${isDark ? 'text-slate-555' : 'text-gray-400'}`}>
-                    Member since {new Date(user.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long' })}
-                  </p>
-                )}
+              
+              {/* Level Progress Bar */}
+              <div className="border-t border-border-subtle/50 pt-3">
+                <div className="flex items-center justify-between text-[11px] mb-1.5 font-bold">
+                  <span className="text-text-muted">Progression</span>
+                  <span className="text-text-primary">{xp} / {100 * level * level} XP</span>
+                </div>
+                <div className="h-2 bg-background-elevated rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-blue-500 to-brand-primary rounded-full transition-all duration-500"
+                    style={{ width: `${Math.min(100, (xp / (100 * level * level)) * 100)}%` }}
+                  />
+                </div>
               </div>
             </div>
 
+            {/* Visual Achievements shelf */}
+            <div className="p-5 rounded-3xl border border-border-subtle bg-background-surface shadow-sm transition-colors space-y-3">
+              <h3 className="font-bold text-sm">🏆 Achievements Badge Shelf</h3>
+              <div className="grid grid-cols-2 gap-2 text-center">
+                {[
+                  { id: 'FIRST_TASK_COMPLETED', title: 'First Task Done', icon: '🏆', desc: 'Completed your first matrix task' },
+                  { id: 'SEVEN_DAY_STREAK', title: '7 Day Streak', icon: '🔥', desc: 'Prioritized 7 days consecutively' },
+                  { id: 'FIFTY_Q2_TASKS', title: '50 Q2 Master', icon: '🎯', desc: '50 Schedule tasks completed' },
+                  { id: 'HUNDRED_FOCUS_SESSIONS', title: '100 Flow states', icon: '⚡', desc: 'Completed 100 focus timers' },
+                ].map(badge => {
+                  const isUnlocked = achievements.some(a => a.type === badge.id);
+                  return (
+                    <div 
+                      key={badge.id}
+                      className={`p-3 rounded-2xl border transition-all ${
+                        isUnlocked 
+                          ? 'bg-gradient-to-br from-brand-primary/10 to-indigo-500/10 border-brand-primary/30 text-text-primary shadow-xs' 
+                          : 'bg-background-elevated/40 border-border-subtle/40 opacity-40 text-text-muted'
+                      }`}
+                    >
+                      <div className="text-2xl mb-1">{badge.icon}</div>
+                      <h4 className="text-[11px] font-bold">{badge.title}</h4>
+                      <p className="text-[9px] mt-0.5 leading-tight">{badge.desc}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Accountability Partner */}
+            <div className="p-4 rounded-2xl border border-border-subtle bg-background-surface shadow-sm transition-colors space-y-4">
+              <h3 className="font-semibold text-sm">Accountability Partner</h3>
+              <p className="text-xs text-text-muted">Link with a partner to share your weekly matrix completions and streaks.</p>
+              
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Enter Partner's User ID"
+                  className="flex-1 px-3 py-2 bg-background-elevated border border-border-subtle rounded-xl text-xs outline-none focus:border-brand-primary"
+                  value={partnerIdInput}
+                  onChange={(e) => setPartnerIdInput(e.target.value)}
+                />
+                <button
+                  onClick={async () => {
+                    if (!partnerIdInput.trim()) return;
+                    try {
+                      const res = await api.linkPartner(partnerIdInput.trim());
+                      addAlert(`✅ Linked successfully with partner ${res.partnerName || 'User'}!`, 'success');
+                      setPartnerIdInput("");
+                      refreshProfileStats();
+                    } catch (err) {
+                      addAlert(`❌ ${err.message || 'Failed to link partner'}`, 'error');
+                    }
+                  }}
+                  className="px-4 py-2 bg-brand-primary text-white text-xs font-bold rounded-xl active:scale-95"
+                >
+                  Link
+                </button>
+              </div>
+
+              {partnerStatus && partnerStatus.linked ? (
+                <div className="p-3 bg-background-elevated rounded-2xl text-xs space-y-3.5 border border-border-subtle/40">
+                  <div className="flex justify-between items-center font-bold">
+                    <span className="text-text-primary">Partner: {partnerStatus.partnerName}</span>
+                    <span className="text-amber-500 flex items-center gap-0.5">🔥 {partnerStatus.streak}d streak</span>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-2 text-[10px] font-semibold text-text-muted">
+                    <div className="p-2 bg-background-surface rounded-xl border border-border-subtle/50">
+                      <span>Weekly Completions:</span>
+                      <div className="text-sm font-extrabold text-brand-primary mt-0.5">{partnerStatus.weeklyCompletions} / {partnerStatus.weeklyPlanned}</div>
+                    </div>
+                    <div className="p-2 bg-background-surface rounded-xl border border-border-subtle/50">
+                      <span>Top Area Focus:</span>
+                      <div className="text-[10px] font-bold text-indigo-400 truncate mt-0.5">{partnerStatus.topArea}</div>
+                    </div>
+                  </div>
+
+                  {/* Encouragement cheer */}
+                  <div className="flex gap-2 border-t border-border-subtle/40 pt-2.5">
+                    <input
+                      type="text"
+                      placeholder="Cheer your partner (e.g. Keep going!)"
+                      className="flex-1 px-3 py-2 bg-background-surface border border-border-subtle rounded-xl text-[10px] outline-none"
+                      value={partnerMessage}
+                      onChange={(e) => setPartnerMessage(e.target.value)}
+                    />
+                    <button
+                      onClick={async () => {
+                        try {
+                          await api.sendPartnerCheer(partnerMessage.trim());
+                          addAlert('🎉 Cheer notification sent to partner!', 'success');
+                          setPartnerMessage("");
+                        } catch (err) {
+                          addAlert('❌ Failed to send cheer.', 'error');
+                        }
+                      }}
+                      className="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-bold rounded-xl active:scale-95"
+                    >
+                      Send Cheer
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2 pt-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      try {
+                        navigator.clipboard.writeText(user.id);
+                        addAlert('📋 Copied your User ID to clipboard!', 'success');
+                      } catch {
+                        addAlert('❌ Failed to copy link', 'error');
+                      }
+                    }}
+                    className="w-full py-2.5 rounded-xl border border-brand-primary/30 bg-brand-primary/5 hover:bg-brand-primary/10 text-brand-primary font-bold text-xs transition-all flex items-center justify-center gap-2 active:scale-98"
+                  >
+                    Copy My User ID to Share
+                  </button>
+                  <p className="text-[10px] text-text-muted text-center leading-normal">
+                    Give your User ID to your partner or enter theirs above to link.
+                  </p>
+                </div>
+              )}
+            </div>
+
             {/* Appearance settings */}
-            <div className={`p-4 rounded-2xl border shadow-sm transition-colors ${isDark ? 'bg-slate-800/80 border-slate-700/80 text-slate-100' : 'bg-white border-slate-200/60 text-slate-800'
-              }`}>
+            <div className="p-4 rounded-2xl border border-border-subtle bg-background-surface shadow-sm transition-colors">
               <h3 className="font-semibold text-sm mb-2.5">Appearance</h3>
               <div className="flex items-center justify-between">
-                <span className={`text-xs font-medium ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Theme Mode</span>
+                <span className="text-xs text-text-muted font-semibold">Theme Mode</span>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setTheme('light')}
-                    className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all ${theme === 'light'
-                        ? 'bg-slate-900 text-white border-slate-900 dark:bg-white dark:text-slate-900 dark:border-white shadow-sm'
-                        : 'border-slate-200 text-slate-500 hover:text-slate-800 dark:border-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+                    className={`px-4 py-1.5 rounded-full text-xs font-bold border transition-all duration-200 ${theme === 'light'
+                        ? 'bg-text-primary text-background-deep border-text-primary shadow-sm'
+                        : 'border-border-subtle bg-background-elevated/40 text-text-muted hover:bg-background-elevated hover:text-text-primary'
                       }`}
                   >
                     Light
                   </button>
                   <button
                     onClick={() => setTheme('dark')}
-                    className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all ${theme === 'dark'
-                        ? 'bg-slate-900 text-white border-slate-900 dark:bg-white dark:text-slate-900 dark:border-white shadow-sm'
-                        : 'border-slate-200 text-slate-500 hover:text-slate-800 dark:border-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+                    className={`px-4 py-1.5 rounded-full text-xs font-bold border transition-all duration-200 ${theme === 'dark'
+                        ? 'bg-brand-primary border-brand-primary text-white shadow-sm'
+                        : 'border-border-subtle bg-background-elevated/40 text-text-muted hover:bg-background-elevated hover:text-text-primary'
                       }`}
                   >
                     Dark
@@ -753,11 +1106,10 @@ export default function App() {
             </div>
 
             {/* Weekly goal settings */}
-            <div className={`p-4 rounded-2xl border shadow-sm transition-colors ${isDark ? 'bg-slate-800/80 border-slate-700/80 text-slate-100' : 'bg-white border-slate-200/60 text-slate-800'
-              }`}>
+            <div className="p-4 rounded-2xl border border-border-subtle bg-background-surface shadow-sm transition-colors">
               <h3 className="font-semibold text-sm mb-2.5">Weekly Goal</h3>
               <div className="flex items-center justify-between gap-3">
-                <span className={`text-xs font-medium ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Target Tasks Per Week</span>
+                <span className="text-xs text-text-muted font-semibold">Target Tasks Per Week</span>
                 <div className="flex items-center gap-2">
                   <input
                     type="number"
@@ -769,26 +1121,22 @@ export default function App() {
                       const v = parseInt(e.target.value, 10);
                       if (Number.isFinite(v) && v > 0) setWeeklyGoal(v);
                     }}
-                    className={`w-20 px-2 py-1 rounded-lg border outline-none text-xs text-center font-semibold ${isDark
-                        ? 'bg-slate-950/40 border-slate-700 text-slate-100 focus:border-blue-500/80'
-                        : 'bg-white border-slate-300 text-slate-800 focus:border-blue-500/80'
-                      }`}
+                    className="w-20 px-2 py-1 rounded-lg border border-border-subtle bg-background-elevated text-text-primary focus:border-brand-primary/80 outline-none text-xs text-center font-bold"
                   />
                 </div>
               </div>
             </div>
 
             {/* App Info card */}
-            <div className={`p-4 rounded-2xl border shadow-sm transition-colors ${isDark ? 'bg-slate-800/80 border-slate-700/80 text-slate-100' : 'bg-white border-slate-200/60 text-slate-800'
-              }`}>
+            <div className="p-4 rounded-2xl border border-border-subtle bg-background-surface shadow-sm transition-colors">
               <h3 className="font-semibold text-sm mb-1.5">App Info</h3>
-              <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Quadra — Eisenhower Matrix task manager.</p>
+              <p className="text-xs text-text-muted">Quadra — AI Eisenhower Productivity Coach.</p>
             </div>
 
             {/* Logout button */}
             <button
               onClick={handleLogout}
-              className="w-full mt-4 py-3.5 rounded-2xl bg-red-50 text-red-600 border border-red-200 font-bold text-xs sm:text-sm shadow-sm hover:bg-red-100 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/40 dark:hover:bg-red-950/40 transition-all duration-300 flex items-center justify-center gap-2 active:scale-98"
+              className="w-full mt-4 py-3.5 rounded-2xl bg-red-500/10 text-red-500 border border-red-500/20 font-bold text-xs sm:text-sm shadow-sm hover:bg-red-500/20 transition-all duration-200 flex items-center justify-center gap-2 active:scale-98"
             >
               <FiLogOut size={16} />
               <span>Logout</span>
@@ -822,18 +1170,16 @@ export default function App() {
           exit={{ opacity: 0 }}
         >
           <motion.div
-            className={`backdrop-blur-md rounded-3xl p-8 max-w-md w-full shadow-2xl border text-center ${
-              isDark 
-                ? 'bg-slate-900/95 border-slate-800 text-slate-100 shadow-slate-950/50' 
-                : 'bg-white/95 border-white/20 text-slate-800'
-            }`}
+            className="backdrop-blur-md rounded-3xl p-8 max-w-md w-full shadow-2xl border border-border-subtle text-center bg-background-surface text-text-primary"
             initial={{ scale: 0.8, opacity: 0, y: 50 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.8, opacity: 0, y: 50 }}
             transition={{ type: "spring", stiffness: 300, damping: 25 }}
+            onClick={(e) => e.stopPropagation()}
+            style={{ WebkitOverflowScrolling: 'touch' }}
           >
             <motion.div
-              className="w-20 h-20 bg-gradient-to-r from-blue-500 to-purple-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg"
+              className="w-20 h-20 bg-gradient-to-r from-blue-500 to-brand-primary rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg"
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ delay: 0.2, type: "spring", stiffness: 300 }}
@@ -841,45 +1187,44 @@ export default function App() {
               <span className="text-3xl">🎯</span>
             </motion.div>
 
-            <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
-              Welcome to Focus First!
+            <h2 className="text-3xl font-bold font-display bg-gradient-to-r from-blue-500 to-brand-primary bg-clip-text text-transparent mb-4">
+              Welcome to Quadra
             </h2>
 
-            <p className={`mb-6 leading-relaxed text-sm ${isDark ? 'text-slate-300' : 'text-gray-600'}`}>
-              Organize your tasks using the powerful Eisenhower Matrix.
-              Drag and drop tasks between quadrants to prioritize effectively.
+            <p className="mb-6 leading-relaxed text-sm text-text-muted font-medium">
+              Your AI Eisenhower Productivity Coach. Organize your tasks, enter focus timers, unlock badges, link partners, and check daily insights!
             </p>
 
-            <div className="space-y-3 mb-8 text-left">
+            <div className="space-y-3 mb-8 text-left text-text-primary">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-red-100 dark:bg-red-950/40 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <span className="text-red-600 dark:text-red-400 text-sm">⚡</span>
+                <div className="w-8 h-8 bg-rose-50 dark:bg-rose-950/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <span className="text-rose-600 dark:text-rose-400 text-sm">⚡</span>
                 </div>
-                <span className={`text-sm ${isDark ? 'text-slate-200 font-medium' : 'text-gray-700'}`}>Important & Urgent - Do First</span>
+                <span className="text-sm font-semibold text-text-primary">Q1 Do First (Urgent & Important)</span>
               </div>
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-blue-100 dark:bg-blue-950/40 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <span className="text-blue-600 dark:text-blue-400 text-sm">🎯</span>
+                <div className="w-8 h-8 bg-indigo-50 dark:bg-indigo-950/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <span className="text-indigo-600 dark:text-indigo-400 text-sm">🎯</span>
                 </div>
-                <span className={`text-sm ${isDark ? 'text-slate-200 font-medium' : 'text-gray-700'}`}>Important & Not Urgent - Schedule</span>
+                <span className="text-sm font-semibold text-text-primary">Q2 Schedule (Not Urgent & Important)</span>
               </div>
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-yellow-100 dark:bg-yellow-950/40 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <span className="text-yellow-600 dark:text-yellow-400 text-sm">⏰</span>
+                <div className="w-8 h-8 bg-amber-50 dark:bg-amber-950/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <span className="text-amber-600 dark:text-amber-400 text-sm">⏰</span>
                 </div>
-                <span className={`text-sm ${isDark ? 'text-slate-200 font-medium' : 'text-gray-700'}`}>Not Important & Urgent - Delegate</span>
+                <span className="text-sm font-semibold text-text-primary">Q3 Delegate (Urgent & Not Important)</span>
               </div>
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-green-100 dark:bg-green-950/40 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <span className="text-green-600 dark:text-green-400 text-sm">✅</span>
+                <div className="w-8 h-8 bg-emerald-50 dark:bg-emerald-950/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <span className="text-emerald-600 dark:text-emerald-400 text-sm">✅</span>
                 </div>
-                <span className={`text-sm ${isDark ? 'text-slate-200 font-medium' : 'text-gray-700'}`}>Not Important & Not Urgent - Eliminate</span>
+                <span className="text-sm font-semibold text-text-primary">Q4 Eliminate (Not Urgent & Not Important)</span>
               </div>
             </div>
 
             <motion.button
               onClick={() => setShowWelcome(false)}
-              className="w-full px-6 py-3 rounded-2xl bg-gradient-to-r from-blue-500 to-purple-600 text-white font-bold shadow-lg hover:shadow-xl transition-all duration-300 text-sm sm:text-base"
+              className="w-full px-6 py-3 rounded-2xl bg-gradient-to-r from-blue-500 to-brand-primary text-white font-bold shadow-md shadow-purple-500/20 hover:shadow-lg transition-all duration-300 text-sm sm:text-base"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
@@ -925,6 +1270,33 @@ export default function App() {
             </button>
           </div>
         </div>
+      )}
+
+      {/* Focus Mode View overlay */}
+      {focusTask && (
+        <FocusMode
+          activeTask={focusTask}
+          onClose={() => setFocusTask(null)}
+          onSessionComplete={(mins, result) => {
+            setFocusTask(null);
+            if (result && result.stats) {
+              setXp(result.stats.xp);
+              setLevel(result.stats.level);
+              setStreak(result.stats.streak);
+              if (result.levelUp) {
+                addAlert(`🎉 Level Up! You reached Level ${result.stats.level}!`, 'success');
+              }
+              if (result.newAchievements && result.newAchievements.length > 0) {
+                result.newAchievements.forEach(ach => {
+                  addAlert(`🏆 Unlocked Achievement: ${ach}!`, 'success');
+                });
+              }
+            } else {
+              awardXp(20);
+            }
+          }}
+          theme={theme}
+        />
       )}
     </MobileShell>
   );
