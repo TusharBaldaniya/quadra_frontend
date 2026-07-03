@@ -133,7 +133,7 @@ export default function App() {
       }
       const { publicKey } = await api.getVapidPublicKey();
       if (!publicKey) return;
-      
+
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(publicKey),
@@ -181,7 +181,7 @@ export default function App() {
     try {
       localStorage.setItem('quadra_streak', String(newStreak));
       localStorage.setItem('quadra_last_active_date', todayStr);
-    } catch {}
+    } catch { }
 
     addAlert(`🔥 Streak active! ${newStreak} days consecutive!`, 'success');
   };
@@ -190,7 +190,7 @@ export default function App() {
     try {
       localStorage.setItem('quadra_xp', String(xp));
       localStorage.setItem('quadra_level', String(level));
-    } catch {}
+    } catch { }
   }, [xp, level]);
 
   const awardXp = (amount) => {
@@ -721,8 +721,8 @@ export default function App() {
       setXp((prevXp) => Math.max(0, prevXp - xpEarned));
     };
     const commit = async () => {
-      try { 
-        const result = await api.completeTask(task.id); 
+      try {
+        const result = await api.completeTask(task.id);
         if (result && result.stats) {
           setXp(result.stats.xp);
           setLevel(result.stats.level);
@@ -935,7 +935,7 @@ export default function App() {
                   <p className="text-xs text-text-muted truncate">{user.email}</p>
                 </div>
               </div>
-              
+
               {/* Level Progress Bar */}
               <div className="border-t border-border-subtle/50 pt-3">
                 <div className="flex items-center justify-between text-[11px] mb-1.5 font-bold">
@@ -943,7 +943,7 @@ export default function App() {
                   <span className="text-text-primary">{xp} / {100 * level * level} XP</span>
                 </div>
                 <div className="h-2 bg-background-elevated rounded-full overflow-hidden">
-                  <div 
+                  <div
                     className="h-full bg-gradient-to-r from-blue-500 to-brand-primary rounded-full transition-all duration-500"
                     style={{ width: `${Math.min(100, (xp / (100 * level * level)) * 100)}%` }}
                   />
@@ -963,13 +963,12 @@ export default function App() {
                 ].map(badge => {
                   const isUnlocked = achievements.some(a => a.type === badge.id);
                   return (
-                    <div 
+                    <div
                       key={badge.id}
-                      className={`p-3 rounded-2xl border transition-all ${
-                        isUnlocked 
-                          ? 'bg-gradient-to-br from-brand-primary/10 to-indigo-500/10 border-brand-primary/30 text-text-primary shadow-xs' 
+                      className={`p-3 rounded-2xl border transition-all ${isUnlocked
+                          ? 'bg-gradient-to-br from-brand-primary/10 to-indigo-500/10 border-brand-primary/30 text-text-primary shadow-xs'
                           : 'bg-background-elevated/40 border-border-subtle/40 opacity-40 text-text-muted'
-                      }`}
+                        }`}
                     >
                       <div className="text-2xl mb-1">{badge.icon}</div>
                       <h4 className="text-[11px] font-bold">{badge.title}</h4>
@@ -984,7 +983,7 @@ export default function App() {
             <div className="p-4 rounded-2xl border border-border-subtle bg-background-surface shadow-sm transition-colors space-y-4">
               <h3 className="font-semibold text-sm">Accountability Partner</h3>
               <p className="text-xs text-text-muted">Link with a partner to share your weekly matrix completions and streaks.</p>
-              
+
               <div className="flex gap-2">
                 <input
                   type="text"
@@ -1017,7 +1016,7 @@ export default function App() {
                     <span className="text-text-primary">Partner: {partnerStatus.partnerName}</span>
                     <span className="text-amber-500 flex items-center gap-0.5">🔥 {partnerStatus.streak}d streak</span>
                   </div>
-                  
+
                   <div className="grid grid-cols-2 gap-2 text-[10px] font-semibold text-text-muted">
                     <div className="p-2 bg-background-surface rounded-xl border border-border-subtle/50">
                       <span>Weekly Completions:</span>
@@ -1086,8 +1085,8 @@ export default function App() {
                   <button
                     onClick={() => setTheme('light')}
                     className={`px-4 py-1.5 rounded-full text-xs font-bold border transition-all duration-200 ${theme === 'light'
-                        ? 'bg-text-primary text-background-deep border-text-primary shadow-sm'
-                        : 'border-border-subtle bg-background-elevated/40 text-text-muted hover:bg-background-elevated hover:text-text-primary'
+                      ? 'bg-text-primary text-background-deep border-text-primary shadow-sm'
+                      : 'border-border-subtle bg-background-elevated/40 text-text-muted hover:bg-background-elevated hover:text-text-primary'
                       }`}
                   >
                     Light
@@ -1095,8 +1094,8 @@ export default function App() {
                   <button
                     onClick={() => setTheme('dark')}
                     className={`px-4 py-1.5 rounded-full text-xs font-bold border transition-all duration-200 ${theme === 'dark'
-                        ? 'bg-brand-primary border-brand-primary text-white shadow-sm'
-                        : 'border-border-subtle bg-background-elevated/40 text-text-muted hover:bg-background-elevated hover:text-text-primary'
+                      ? 'bg-brand-primary border-brand-primary text-white shadow-sm'
+                      : 'border-border-subtle bg-background-elevated/40 text-text-muted hover:bg-background-elevated hover:text-text-primary'
                       }`}
                   >
                     Dark
@@ -1151,9 +1150,9 @@ export default function App() {
           <div
             key={alert.id}
             className={`p-3 rounded-lg shadow-lg text-sm font-medium animate-slide-in ${alert.type === 'error' ? 'bg-red-100 text-red-800 border border-red-200' :
-                alert.type === 'warning' ? 'bg-yellow-100 text-yellow-800 border border-yellow-200' :
-                  alert.type === 'success' ? 'bg-green-100 text-green-800 border border-green-200' :
-                    'bg-blue-100 text-blue-800 border border-blue-200'
+              alert.type === 'warning' ? 'bg-yellow-100 text-yellow-800 border border-yellow-200' :
+                alert.type === 'success' ? 'bg-green-100 text-green-800 border border-green-200' :
+                  'bg-blue-100 text-blue-800 border border-blue-200'
               }`}
           >
             {alert.message}
@@ -1179,12 +1178,16 @@ export default function App() {
             style={{ WebkitOverflowScrolling: 'touch' }}
           >
             <motion.div
-              className="w-20 h-20 bg-gradient-to-r from-blue-500 to-brand-primary rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg"
+              className="w-40 h-40 mx-auto flex items-center justify-center"
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ delay: 0.2, type: "spring", stiffness: 300 }}
             >
-              <span className="text-3xl">🎯</span>
+              <img
+                src="/quadra-icon-transparent.png"
+                alt="Quadra Logo"
+                className="w-full h-full object-contain"
+              />
             </motion.div>
 
             <h2 className="text-3xl font-bold font-display bg-gradient-to-r from-blue-500 to-brand-primary bg-clip-text text-transparent mb-4">

@@ -2,14 +2,14 @@ import React from "react";
 import { FiPlus, FiDownload } from "react-icons/fi";
 import BottomNav from "./bottomNav";
 
-export default function MobileShell({ 
-  title = "Quadra", 
-  subtitle, 
-  currentTab, 
-  onTabChange, 
-  onFabClick, 
-  children, 
-  showFab = true, 
+export default function MobileShell({
+  title = "Quadra",
+  subtitle,
+  currentTab,
+  onTabChange,
+  onFabClick,
+  children,
+  showFab = true,
   theme = 'light',
   isStandalone = false,
   isIOS = false,
@@ -23,10 +23,10 @@ export default function MobileShell({
       <header className="sticky top-0 z-20 backdrop-blur-md bg-background-surface/75 border-b border-border-subtle" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
         <div className="mx-auto max-w-3xl w-full px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3 min-w-0">
-            <img 
-              src="/dummy.png" 
-              alt="Logo" 
-              className="w-8 h-8 rounded-lg object-cover shadow-md border border-border-subtle flex-shrink-0" 
+            <img
+              src="/quadra-symbol.png"
+              alt="Logo"
+              className="w-10 h-10 rounded-xl object-contain bg-white p-1 border border-border-subtle flex-shrink-0 shadow-sm"
             />
             <div className="min-w-0">
               <h1 className="text-xl font-bold font-display bg-gradient-to-r from-blue-500 to-brand-primary bg-clip-text text-transparent truncate">
@@ -53,7 +53,7 @@ export default function MobileShell({
                     <span>Install App</span>
                   </button>
                 )}
-                
+
                 {/* iOS install instructions button */}
                 {isIOS && (
                   <button
@@ -65,7 +65,7 @@ export default function MobileShell({
                     <span>Install</span>
                   </button>
                 )}
-                
+
                 {/* Fallback for Android when no prompt is available */}
                 {!deferredPrompt && !isIOS && (
                   <button

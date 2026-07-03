@@ -7,14 +7,14 @@ export default function Navbar({ user = "User", onInstallClick, deferredPrompt, 
     <nav className="fixed top-0 w-full bg-white/80 backdrop-blur-md shadow-lg z-50 border-b border-white/20">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
         {/* Logo + Title */}
-        <motion.div 
+        <motion.div
           className="flex items-center gap-4"
           initial={{ x: -50, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           transition={{ duration: 0.6 }}
         >
-          <motion.img 
-            src="/dummy.png"
+          <motion.img
+            src="/logo.png"
             alt="Logo"
             className="w-12 h-12 rounded-2xl object-cover shadow-lg border border-slate-100"
             whileHover={{ rotate: 360, scale: 1.1 }}
@@ -29,7 +29,7 @@ export default function Navbar({ user = "User", onInstallClick, deferredPrompt, 
         </motion.div>
 
         {/* Right side */}
-        <motion.div 
+        <motion.div
           className="flex items-center gap-3"
           initial={{ x: 50, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
@@ -51,7 +51,7 @@ export default function Navbar({ user = "User", onInstallClick, deferredPrompt, 
                   <span className="hidden sm:inline">Install App</span>
                 </motion.button>
               )}
-              
+
               {/* iOS install instructions button */}
               {isIOS && (
                 <motion.button
@@ -65,7 +65,7 @@ export default function Navbar({ user = "User", onInstallClick, deferredPrompt, 
                   <span className="hidden sm:inline">Install</span>
                 </motion.button>
               )}
-              
+
               {/* Fallback for Android when no prompt is available */}
               {!deferredPrompt && !isIOS && (
                 <motion.button
@@ -83,7 +83,7 @@ export default function Navbar({ user = "User", onInstallClick, deferredPrompt, 
           )}
 
           {/* User Avatar */}
-          <motion.div 
+          <motion.div
             className="flex items-center gap-3 bg-white/60 backdrop-blur-sm px-4 py-2 rounded-xl shadow-lg border border-white/20"
             whileHover={{ scale: 1.05 }}
             transition={{ duration: 0.2 }}

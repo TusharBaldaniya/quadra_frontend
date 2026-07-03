@@ -115,8 +115,8 @@ export default function TaskCard({ task, index, quadrant, onEdit, onDelete, onCo
           <div
             ref={provided.innerRef}
             {...provided.draggableProps}
-            // Bind drag handle props only when dragEnabled is true or if not using long-press (e.g. desktop)
-            {...(dragEnabled || !('ontouchstart' in window) ? provided.dragHandleProps : {})}
+            // Bind drag handle props only when dragEnabled is true or if using a hover-capable device (desktop mouse/trackpad)
+            {...(dragEnabled || window.matchMedia("(hover: hover)").matches ? provided.dragHandleProps : {})}
             style={provided.draggableProps.style}
             className={`relative rounded-2xl ${showMenu || showQuadrantMenu ? 'overflow-visible z-30' : 'overflow-hidden'} transition-all`}
           >

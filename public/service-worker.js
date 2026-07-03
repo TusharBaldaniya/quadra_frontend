@@ -4,7 +4,7 @@ const urlsToCache = [
   '/index.html',
   '/manifest.json',
   '/favicon.ico',
-  '/dummy.png'
+  '/quadra-symbol.png'
 ];
 
 self.addEventListener('install', (event) => {
@@ -41,13 +41,13 @@ self.addEventListener('fetch', (event) => {
   }
 
   // Handle static assets (JS, CSS, images, google fonts) dynamically using stale-while-revalidate
-  const isStatic = url.pathname.includes('/static/') || 
-                   url.pathname.endsWith('.png') || 
-                   url.pathname.endsWith('.svg') || 
-                   url.pathname.endsWith('.ico') ||
-                   url.pathname.endsWith('.json') ||
-                   url.host.includes('fonts.googleapis.com') ||
-                   url.host.includes('fonts.gstatic.com');
+  const isStatic = url.pathname.includes('/static/') ||
+    url.pathname.endsWith('.png') ||
+    url.pathname.endsWith('.svg') ||
+    url.pathname.endsWith('.ico') ||
+    url.pathname.endsWith('.json') ||
+    url.host.includes('fonts.googleapis.com') ||
+    url.host.includes('fonts.gstatic.com');
 
   if (isStatic) {
     event.respondWith(
@@ -102,8 +102,8 @@ self.addEventListener('push', (event) => {
 
   const options = {
     body: data.body,
-    icon: '/dummy.png',
-    badge: '/dummy.png',
+    icon: '/logo.png',
+    badge: '/logo.png',
     vibrate: [100, 50, 100],
     data: {
       dateOfArrival: Date.now(),
