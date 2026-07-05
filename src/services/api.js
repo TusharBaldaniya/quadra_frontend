@@ -1,15 +1,23 @@
 const BASE_URL = process.env.REACT_APP_API_BASE || 'https://quadra-production-1943.up.railway.app';
 
+// add scheduler for every 30 minute to check backend health
+async function scheduler() {
+  setInterval(() => {
+    request('/health', { method: 'GET' });
+  }, 30 * 60 * 1000);
+}
+scheduler();
+
 async function request(path, options = {}) {
   const token = localStorage.getItem('quadra_auth_token');
-  const headers = { 
-    'Content-Type': 'application/json', 
-    ...(options.headers || {}) 
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(options.headers || {})
   };
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
-  
+
   const res = await fetch(`${BASE_URL}${path}`, {
     headers,
     credentials: 'include',
@@ -25,11 +33,11 @@ async function request(path, options = {}) {
 
 export const api = {
   // Authentication
-  login: (email, password) => 
+  login: (email, password) =>
     request('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
-  signup: (email, password, name) => 
+  signup: (email, password, name) =>
     request('/auth/signup', { method: 'POST', body: JSON.stringify({ email, password, name }) }),
-  getMe: () => 
+  getMe: () =>
     request('/auth/me'),
 
   // Tasks
@@ -50,7 +58,7 @@ export const api = {
     request('/ai/analyze', { method: 'POST', body: JSON.stringify({ text }) }),
   getAiInsights: () =>
     request('/ai/insights'),
-  
+
   // Focus Tracking
   createFocusSession: (taskId, duration) =>
     request('/focus', { method: 'POST', body: JSON.stringify({ taskId, duration }) }),
@@ -62,7 +70,7 @@ export const api = {
   linkPartner: (partnerId) => request('/gamification/partner/link', { method: 'POST', body: JSON.stringify({ partnerId }) }),
   sendPartnerCheer: (message) => request('/gamification/partner/cheer', { method: 'POST', body: JSON.stringify({ message }) }),
   getGamificationStats: () => request('/gamification/stats'),
-  
+
   // Analytics
   getSummary: () => request('/analytics/summary'),
   getCompletions: (days = 14) => request(`/analytics/completions?days=${days}`),
