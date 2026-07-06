@@ -20,6 +20,12 @@ export default function MobileShell({
 }) {
   return (
     <div className="bg-background-deep text-text-primary min-h-screen flex flex-col font-body transition-colors duration-200">
+      {/* Top Status Bar Blur Shield */}
+      <div 
+        className="fixed top-0 left-0 right-0 z-30 pointer-events-none backdrop-blur-md bg-background-deep/50 border-b border-white/[0.02]" 
+        style={{ height: 'calc(env(safe-area-inset-top) + 8px)' }} 
+      />
+
       {/* Top bar */}
       <header className="sticky top-0 z-20 w-full px-3 pt-3" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 8px)' }}>
         <div className="mx-auto max-w-3xl w-full px-4 py-2.5 flex items-center justify-between rounded-3xl border border-white/[0.06] bg-slate-900/60 backdrop-blur-2xl shadow-xl shadow-black/20">
@@ -27,12 +33,12 @@ export default function MobileShell({
             {/* Logo in a gradient glass circle */}
             <div className="relative flex-shrink-0 w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-500/15 to-purple-500/15 p-1 border border-white/10 flex items-center justify-center shadow-inner">
               <img
-                src="/quadra-symbol.png"
+                src="/quadra-symbol-transparent.png"
                 alt="Logo"
                 className="w-full h-full object-contain filter drop-shadow-[0_2px_8px_rgba(99,102,241,0.3)]"
               />
             </div>
-            
+
             <div className="min-w-0">
               <h1 className="text-base font-extrabold font-display bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-transparent truncate tracking-tight">
                 {title}
@@ -94,11 +100,10 @@ export default function MobileShell({
             {user && (
               <button
                 onClick={() => onTabChange?.('profile')}
-                className={`w-9 h-9 rounded-full bg-gradient-to-tr from-cyan-500 via-blue-500 to-purple-600 text-white flex items-center justify-center font-extrabold text-sm shadow-[0_0_15px_rgba(99,102,241,0.25)] border-2 ${
-                  currentTab === 'profile'
+                className={`w-9 h-9 rounded-full bg-gradient-to-tr from-cyan-500 via-blue-500 to-purple-600 text-white flex items-center justify-center font-extrabold text-sm shadow-[0_0_15px_rgba(99,102,241,0.25)] border-2 ${currentTab === 'profile'
                     ? 'border-white ring-2 ring-purple-500/50 scale-95'
                     : 'border-white/15 hover:border-white/40'
-                } active:scale-90 hover:scale-105 transition-all duration-300`}
+                  } active:scale-90 hover:scale-105 transition-all duration-300`}
                 title="View Profile"
               >
                 {(user.name || 'U').charAt(0).toUpperCase()}

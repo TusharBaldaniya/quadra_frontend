@@ -3,8 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FiMail, FiLock, FiUser, FiEye, FiEyeOff } from 'react-icons/fi';
 import { api } from '../services/api';
 
-export default function AuthPage({ 
-  onAuthSuccess, 
+export default function AuthPage({
+  onAuthSuccess,
   theme = 'light',
   deferredPrompt = null,
   isStandalone = false,
@@ -48,20 +48,18 @@ export default function AuthPage({
   };
 
   return (
-    <div className={`min-h-screen w-full flex items-center justify-center p-4 overflow-hidden relative ${
-      isDark ? 'bg-slate-950 text-slate-100' : 'bg-gradient-to-b from-slate-50 to-slate-100 text-slate-900'
-    }`}>
+    <div className={`min-h-screen w-full flex items-center justify-center p-4 overflow-hidden relative ${isDark ? 'bg-slate-950 text-slate-100' : 'bg-gradient-to-b from-slate-50 to-slate-100 text-slate-900'
+      }`}>
       {/* Floating Install App Option */}
       {!isStandalone && (
         <div className="absolute top-6 right-6 z-20">
           {deferredPrompt && !isIOS && (
             <button
               onClick={onInstallClick}
-              className={`px-4 py-2 rounded-2xl text-xs font-bold border transition-all shadow-md active:scale-95 ${
-                isDark 
-                  ? 'bg-slate-900/60 border-white/10 text-white hover:bg-slate-800' 
+              className={`px-4 py-2 rounded-2xl text-xs font-bold border transition-all shadow-md active:scale-95 ${isDark
+                  ? 'bg-slate-900/60 border-white/10 text-white hover:bg-slate-800'
                   : 'bg-white/80 border-slate-200 text-slate-900 hover:bg-slate-100'
-              }`}
+                }`}
             >
               Install App
             </button>
@@ -69,11 +67,10 @@ export default function AuthPage({
           {isIOS && (
             <button
               onClick={onInstallClick}
-              className={`px-4 py-2 rounded-2xl text-xs font-bold border transition-all shadow-md active:scale-95 ${
-                isDark 
-                  ? 'bg-slate-900/60 border-white/10 text-white hover:bg-slate-800' 
+              className={`px-4 py-2 rounded-2xl text-xs font-bold border transition-all shadow-md active:scale-95 ${isDark
+                  ? 'bg-slate-900/60 border-white/10 text-white hover:bg-slate-800'
                   : 'bg-white/80 border-slate-200 text-slate-900 hover:bg-slate-100'
-              }`}
+                }`}
             >
               Install App
             </button>
@@ -81,11 +78,10 @@ export default function AuthPage({
           {!deferredPrompt && !isIOS && (
             <button
               onClick={onMobileInstall}
-              className={`px-4 py-2 rounded-2xl text-xs font-bold border transition-all shadow-md active:scale-95 ${
-                isDark 
-                  ? 'bg-slate-900/60 border-white/10 text-white hover:bg-slate-800' 
+              className={`px-4 py-2 rounded-2xl text-xs font-bold border transition-all shadow-md active:scale-95 ${isDark
+                  ? 'bg-slate-900/60 border-white/10 text-white hover:bg-slate-800'
                   : 'bg-white/80 border-slate-200 text-slate-900 hover:bg-slate-100'
-              }`}
+                }`}
             >
               Install App
             </button>
@@ -103,7 +99,7 @@ export default function AuthPage({
           <div className="inline-flex items-center gap-3 mb-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-500/10 to-purple-500/10 p-1 border border-white/10 flex items-center justify-center shadow-inner">
               <img
-                src="/quadra-symbol.png"
+                src="/quadra-symbol-transparent.png"
                 alt="Logo"
                 className="w-full h-full object-contain filter drop-shadow-[0_2px_8px_rgba(99,102,241,0.3)]"
               />
@@ -118,33 +114,30 @@ export default function AuthPage({
         </div>
 
         {/* Auth Glass Card */}
-        <motion.div 
+        <motion.div
           layout
-          className={`backdrop-blur-xl border p-6 sm:p-8 rounded-3xl shadow-2xl transition-all duration-300 ${
-            isDark 
-              ? 'bg-slate-900/60 border-slate-800/80 shadow-slate-950/50' 
+          className={`backdrop-blur-xl border p-6 sm:p-8 rounded-3xl shadow-2xl transition-all duration-300 ${isDark
+              ? 'bg-slate-900/60 border-slate-800/80 shadow-slate-950/50'
               : 'bg-white/70 border-white/60 shadow-slate-200/50'
-          }`}
+            }`}
         >
           {/* Card Toggle Tab */}
           <div className={`flex p-1 rounded-2xl mb-6 ${isDark ? 'bg-slate-950/80' : 'bg-slate-100'}`}>
             <button
               onClick={() => { setIsLogin(true); setError(null); }}
-              className={`flex-1 py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all duration-300 ${
-                isLogin 
-                  ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-md' 
+              className={`flex-1 py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all duration-300 ${isLogin
+                  ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-md'
                   : (isDark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-600 hover:text-slate-900')
-              }`}
+                }`}
             >
               Sign In
             </button>
             <button
               onClick={() => { setIsLogin(false); setError(null); }}
-              className={`flex-1 py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all duration-300 ${
-                !isLogin 
-                  ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-md' 
+              className={`flex-1 py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all duration-300 ${!isLogin
+                  ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-md'
                   : (isDark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-600 hover:text-slate-900')
-              }`}
+                }`}
             >
               Sign Up
             </button>
@@ -182,11 +175,10 @@ export default function AuthPage({
                       placeholder="John Doe"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      className={`w-full text-base pl-10 pr-4 py-2.5 rounded-xl border outline-none transition-all duration-200 ${
-                        isDark 
-                          ? 'bg-slate-950/50 border-slate-800 text-slate-100 focus:border-blue-500/80 focus:ring-4 focus:ring-blue-900/20' 
+                      className={`w-full text-base pl-10 pr-4 py-2.5 rounded-xl border outline-none transition-all duration-200 ${isDark
+                          ? 'bg-slate-950/50 border-slate-800 text-slate-100 focus:border-blue-500/80 focus:ring-4 focus:ring-blue-900/20'
                           : 'bg-white border-slate-200 text-slate-900 focus:border-blue-500/80 focus:ring-4 focus:ring-blue-100/50'
-                      }`}
+                        }`}
                     />
                   </div>
                 </motion.div>
@@ -202,11 +194,10 @@ export default function AuthPage({
                   placeholder="name@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className={`w-full text-base pl-10 pr-4 py-2.5 rounded-xl border outline-none transition-all duration-200 ${
-                    isDark 
-                      ? 'bg-slate-950/50 border-slate-800 text-slate-100 focus:border-blue-500/80 focus:ring-4 focus:ring-blue-900/20' 
+                  className={`w-full text-base pl-10 pr-4 py-2.5 rounded-xl border outline-none transition-all duration-200 ${isDark
+                      ? 'bg-slate-950/50 border-slate-800 text-slate-100 focus:border-blue-500/80 focus:ring-4 focus:ring-blue-900/20'
                       : 'bg-white border-slate-200 text-slate-900 focus:border-blue-500/80 focus:ring-4 focus:ring-blue-100/50'
-                  }`}
+                    }`}
                 />
               </div>
             </div>
@@ -220,11 +211,10 @@ export default function AuthPage({
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className={`w-full text-base pl-10 pr-10 py-2.5 rounded-xl border outline-none transition-all duration-200 ${
-                    isDark 
-                      ? 'bg-slate-950/50 border-slate-800 text-slate-100 focus:border-blue-500/80 focus:ring-4 focus:ring-blue-900/20' 
+                  className={`w-full text-base pl-10 pr-10 py-2.5 rounded-xl border outline-none transition-all duration-200 ${isDark
+                      ? 'bg-slate-950/50 border-slate-800 text-slate-100 focus:border-blue-500/80 focus:ring-4 focus:ring-blue-900/20'
                       : 'bg-white border-slate-200 text-slate-900 focus:border-blue-500/80 focus:ring-4 focus:ring-blue-100/50'
-                  }`}
+                    }`}
                 />
                 <button
                   type="button"
