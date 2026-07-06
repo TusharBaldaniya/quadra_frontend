@@ -4,7 +4,7 @@ const urlsToCache = [
   '/index.html',
   '/manifest.json',
   '/favicon.ico',
-  '/quadra-symbol.png'
+  '/quadra-symbol-transparent.png'
 ];
 
 self.addEventListener('install', (event) => {
