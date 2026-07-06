@@ -16,25 +16,25 @@
   ],
   "icons": [
     {
-      "src": "/quadra-symbol.png",
+      "src": "/quadra-symbol-transparent.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/quadra-symbol.png",
+      "src": "/quadra-symbol-transparent.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/quadra-symbol.png",
+      "src": "/quadra-symbol-transparent.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/quadra-symbol.png",
+      "src": "/quadra-symbol-transparent.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
@@ -42,7 +42,7 @@
   ],
   "screenshots": [
     {
-      "src": "/quadra-symbol.png",
+      "src": "/quadra-symbol-transparent.png",
       "sizes": "512x512",
       "type": "image/png",
       "form_factor": "wide"

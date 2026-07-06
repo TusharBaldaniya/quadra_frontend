@@ -818,15 +818,60 @@ export default function App() {
 
   if (!user) {
     return (
-      <AuthPage
-        onAuthSuccess={(u) => setUser(u)}
-        theme={theme}
-        deferredPrompt={deferredPrompt}
-        isStandalone={isStandalone}
-        isIOS={isIOS}
-        onInstallClick={handleInstallClick}
-        onMobileInstall={handleMobileInstallFallback}
-      />
+      <>
+        <AuthPage
+          onAuthSuccess={(u) => setUser(u)}
+          theme={theme}
+          deferredPrompt={deferredPrompt}
+          isStandalone={isStandalone}
+          isIOS={isIOS}
+          onInstallClick={handleInstallClick}
+          onMobileInstall={handleMobileInstallFallback}
+        />
+        
+        {/* Alerts for unauthenticated state */}
+        <div className="fixed top-20 right-4 z-50 space-y-2 max-w-sm">
+          {alerts.map((alert) => (
+            <div
+              key={alert.id}
+              className={`p-3 rounded-lg shadow-lg text-sm font-medium animate-slide-in ${
+                alert.type === 'error' ? 'bg-red-100 text-red-800 border border-red-200' :
+                  alert.type === 'warning' ? 'bg-yellow-100 text-yellow-800 border border-yellow-200' :
+                    alert.type === 'success' ? 'bg-green-100 text-green-800 border border-green-200' :
+                      'bg-blue-100 text-blue-800 border border-blue-200'
+              }`}
+            >
+              {alert.message}
+            </div>
+          ))}
+        </div>
+
+        {/* Install Instructions Modal for unauthenticated state */}
+        {showInstallInstructions && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full">
+              <h3 className="text-xl font-bold mb-4 text-black font-display">Install Quadra</h3>
+              <div className="space-y-3 text-sm text-gray-700 font-medium">
+                <p className="font-semibold text-gray-900">To install this app on your iPhone:</p>
+                <ol className="list-decimal list-inside space-y-2">
+                  <li>Tap the <strong>Share</strong> button at the bottom of Safari</li>
+                  <li>Scroll down and tap <strong>"Add to Home Screen"</strong></li>
+                  <li>Tap <strong>"Add"</strong> to confirm</li>
+                </ol>
+                <p className="text-xs text-gray-500 mt-4">
+                  The app will then appear on your home screen like a native app.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowInstallInstructions(false)}
+                className="mt-5 w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2.5 px-4 rounded-xl active:scale-95 transition-all shadow-md shadow-blue-500/20"
+              >
+                Got it!
+              </button>
+            </div>
+          </div>
+        )}
+      </>
     );
   }
 

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiMail, FiLock, FiUser, FiEye, FiEyeOff, FiActivity } from 'react-icons/fi';
+import { FiMail, FiLock, FiUser, FiEye, FiEyeOff } from 'react-icons/fi';
 import { api } from '../services/api';
 
 export default function AuthPage({ 
@@ -101,8 +101,12 @@ export default function AuthPage({
         {/* App Branding */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
-              <FiActivity className="text-white text-xl animate-pulse" />
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-500/10 to-purple-500/10 p-1 border border-white/10 flex items-center justify-center shadow-inner">
+              <img
+                src="/quadra-symbol.png"
+                alt="Logo"
+                className="w-full h-full object-contain filter drop-shadow-[0_2px_8px_rgba(99,102,241,0.3)]"
+              />
             </div>
             <h1 className="text-3xl font-extrabold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent tracking-tight">
               Quadra
