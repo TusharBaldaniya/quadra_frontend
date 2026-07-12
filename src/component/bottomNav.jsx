@@ -14,14 +14,17 @@ export default function BottomNav({ currentTab, onTabChange, theme = 'dark' }) {
 
   return (
     <nav 
-      className="fixed bottom-5 left-0 right-0 z-30 px-4 pointer-events-none"
+      className="fixed bottom-0 left-0 right-0 z-30 pointer-events-none"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
+      {/* Background backing block to cover safe area at bottom */}
+      <div className={`absolute inset-0 z-0 ${isDark ? 'bg-slate-900/90' : 'bg-white/90'}`} />
+
       <div 
-        className={`mx-auto max-w-xl w-full grid grid-cols-5 gap-1.5 p-1.5 rounded-3xl border shadow-2xl backdrop-blur-2xl transition-all duration-300 pointer-events-auto ${
+        className={`mx-auto max-w-3xl w-full grid grid-cols-5 gap-1 p-2 rounded-t-3xl border-t shadow-2xl backdrop-blur-2xl transition-all duration-300 pointer-events-auto relative z-10 ${
           isDark 
-            ? 'bg-slate-900/60 border-white/[0.08] shadow-black/35 text-slate-100' 
-            : 'bg-white/70 border-slate-200/50 shadow-slate-300/40 text-slate-900'
+            ? 'bg-slate-900/90 border-white/[0.08] shadow-black/35 text-slate-100' 
+            : 'bg-white/90 border-slate-200/50 shadow-slate-300/40 text-slate-900'
         }`}
       >
         {tabs.map((t) => {

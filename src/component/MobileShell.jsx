@@ -38,17 +38,23 @@ export default function MobileShell({
         className={`fixed top-0 left-0 right-0 z-30 pointer-events-none backdrop-blur-md border-b transition-colors duration-200`} 
         style={{ 
           height: isScrolled ? 'calc(env(safe-area-inset-top) + 2px)' : 'calc(env(safe-area-inset-top) + 8px)',
-          backgroundColor: isDark ? 'rgba(12, 14, 18, 0.4)' : 'rgba(248, 250, 252, 0.4)',
+          backgroundColor: isDark 
+            ? (isScrolled ? 'rgba(12, 14, 18, 0.92)' : 'rgba(12, 14, 18, 0.4)') 
+            : (isScrolled ? 'rgba(248, 250, 252, 0.92)' : 'rgba(248, 250, 252, 0.4)'),
           borderColor: isDark ? 'rgba(255, 255, 255, 0.02)' : 'rgba(0, 0, 0, 0.02)'
         }} 
       />
 
       {/* Top bar */}
       <header className={`sticky top-0 z-20 w-full transition-all duration-300 ${isScrolled ? 'px-1 pt-1' : 'px-3 pt-3'}`} style={{ paddingTop: isScrolled ? 'env(safe-area-inset-top)' : 'calc(env(safe-area-inset-top) + 8px)' }}>
-        <div className={`mx-auto max-w-3xl w-full flex items-center justify-between border shadow-xl transition-all duration-300 ${
+        <div className={`mx-auto max-w-3xl w-full flex items-center justify-between border shadow-xl backdrop-blur-2xl transition-all duration-300 ${
           isDark 
-            ? 'border-white/[0.06] bg-slate-900/60 shadow-black/20' 
-            : 'border-slate-200 bg-white/70 shadow-slate-200/30'
+            ? isScrolled 
+              ? 'border-white/[0.08] bg-slate-900/95 shadow-black/45' 
+              : 'border-white/[0.04] bg-slate-900/40 shadow-black/10'
+            : isScrolled
+              ? 'border-slate-200 bg-white/95 shadow-slate-200/50'
+              : 'border-slate-200/40 bg-white/40 shadow-slate-100/10'
         } ${isScrolled ? 'px-4 py-1.5 rounded-2xl' : 'px-4 py-2.5 rounded-3xl'}`}>
           
           <div className="flex items-center gap-2.5 min-w-0">
