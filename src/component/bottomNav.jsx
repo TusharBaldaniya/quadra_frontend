@@ -1,32 +1,54 @@
-import { FiHome, FiGrid, FiClock, FiPieChart } from "react-icons/fi";
-
+import React from "react";
+import { FiHome, FiGrid, FiClock, FiPieChart, FiCalendar } from "react-icons/fi";
+ 
 const tabs = [
   { id: "today", label: "Today", icon: FiHome },
   { id: "board", label: "Matrix", icon: FiGrid },
+  { id: "calendar", label: "Calendar", icon: FiCalendar },
   { id: "focus_tab", label: "Focus", icon: FiClock },
   { id: "insights", label: "Insights", icon: FiPieChart },
 ];
+ 
+export default function BottomNav({ currentTab, onTabChange, theme = 'dark' }) {
+  const isDark = theme === 'dark';
 
-export default function BottomNav({ currentTab, onTabChange, theme = 'light' }) {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-20 border-t border-border-subtle bg-background-surface/85 backdrop-blur-xl" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) * 0.4)' }}>
-      <div className="mx-auto max-w-3xl w-full grid grid-cols-4 gap-1 px-4 py-1">
+    <nav 
+      className="fixed bottom-5 left-0 right-0 z-30 px-4 pointer-events-none"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+    >
+      <div 
+        className={`mx-auto max-w-xl w-full grid grid-cols-5 gap-1.5 p-1.5 rounded-3xl border shadow-2xl backdrop-blur-2xl transition-all duration-300 pointer-events-auto ${
+          isDark 
+            ? 'bg-slate-900/60 border-white/[0.08] shadow-black/35 text-slate-100' 
+            : 'bg-white/70 border-slate-200/50 shadow-slate-300/40 text-slate-900'
+        }`}
+      >
         {tabs.map((t) => {
           const Icon = t.icon;
           const active = currentTab === t.id;
           return (
             <button
               key={t.id}
-              className={`flex flex-col items-center justify-center gap-0.5 py-1 rounded-xl text-[9px] sm:text-[10px] font-bold transition-all duration-200 ${
+              className={`flex flex-col items-center justify-center gap-1 py-2 px-1 rounded-2xl text-[9px] font-extrabold transition-all duration-300 active:scale-95 relative ${
                 active
-                  ? 'bg-background-elevated/75 text-text-primary shadow-xs border border-border-subtle/40'
-                  : 'text-text-muted hover:bg-background-elevated/30 hover:text-text-primary'
+                  ? isDark
+                    ? 'bg-white/10 text-white border border-white/5 shadow-inner'
+                    : 'bg-slate-100 text-slate-950 border border-slate-200/20 shadow-xs'
+                  : 'text-text-muted hover:text-text-primary'
               }`}
               onClick={() => onTabChange?.(t.id)}
               aria-current={active ? "page" : undefined}
             >
-              <Icon className={`${active ? 'text-brand-primary' : 'text-text-muted'} text-[16px]`} />
-              <span className="leading-none text-[8px] sm:text-[9px]">{t.label}</span>
+              <Icon className={`text-[16px] transition-transform duration-300 ${
+                active ? 'text-brand-primary scale-110' : 'text-text-muted'
+              }`} />
+              <span className="leading-none text-[8px] sm:text-[9px] mt-0.5">{t.label}</span>
+              
+              {/* Dot active indicator */}
+              {active && (
+                <span className="absolute bottom-1 w-1 h-1 rounded-full bg-brand-primary animate-pulse" />
+              )}
             </button>
           );
         })}

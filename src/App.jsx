@@ -7,6 +7,8 @@ import TaskModal from "./component/taskModal";
 import TaskEditModal from "./component/taskEditModal";
 import { api } from "./services/api";
 import MobileShell from "./component/MobileShell";
+import CalendarView from "./component/CalendarView";
+import SearchModal from "./component/SearchModal";
 import Snackbar from "./component/Snackbar";
 import { cacheTasks, getCachedTasks, enqueueMutation, flushQueue, onOnline } from "./services/offline";
 import AuthPage from "./component/AuthPage";
@@ -21,6 +23,37 @@ export default function App() {
     localStorage.removeItem('quadra_auth_token');
     setUser(null);
     setTasks({ q1: [], q2: [], q3: [], q4: [] });
+  };
+
+  // Apply premium theme rewards override on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('custom-theme-override') || 'default';
+    const root = document.documentElement;
+    if (saved === 'mint') {
+      root.style.setProperty('--brand-primary', '150 80% 45%');
+      root.style.setProperty('--brand-secondary', '180 75% 40%');
+    } else if (saved === 'sunset') {
+      root.style.setProperty('--brand-primary', '15 95% 58%');
+      root.style.setProperty('--brand-secondary', '340 90% 60%');
+    } else {
+      root.style.setProperty('--brand-primary', '260 90% 65%');
+      root.style.setProperty('--brand-secondary', '210 95% 55%');
+    }
+  }, []);
+
+  const applyCustomTheme = (themeName) => {
+    const root = document.documentElement;
+    if (themeName === 'default') {
+      root.style.setProperty('--brand-primary', '260 90% 65%');
+      root.style.setProperty('--brand-secondary', '210 95% 55%');
+    } else if (themeName === 'mint') {
+      root.style.setProperty('--brand-primary', '150 80% 45%');
+      root.style.setProperty('--brand-secondary', '180 75% 40%');
+    } else if (themeName === 'sunset') {
+      root.style.setProperty('--brand-primary', '15 95% 58%');
+      root.style.setProperty('--brand-secondary', '340 90% 60%');
+    }
+    localStorage.setItem('custom-theme-override', themeName);
   };
 
   // Validate session on mount
@@ -67,6 +100,9 @@ export default function App() {
     const num = stored ? parseInt(stored, 10) : 20;
     return Number.isFinite(num) && num > 0 ? num : 20;
   });
+
+  const [habits, setHabits] = useState([]);
+  const [showSearch, setShowSearch] = useState(false);
 
   // Focus and Gamification states
   const [focusTask, setFocusTask] = useState(null);
@@ -343,6 +379,11 @@ export default function App() {
               createdAt: t.createdAt ? new Date(t.createdAt) : undefined,
               status: t.status,
               completedAt: t.completedAt ? new Date(t.completedAt) : undefined,
+              projectName: t.projectName,
+              energyLevel: t.energyLevel,
+              context: t.context,
+              aiConfidence: t.aiConfidence,
+              postponedCount: t.postponedCount || 0,
             },
           ];
         }
@@ -354,6 +395,54 @@ export default function App() {
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
+
+  useEffect(() => {
+    const loadHabits = async () => {
+      if (!user) return;
+      try {
+        const data = await api.getHabits();
+        setHabits(data || []);
+      } catch (err) {
+        console.error("Failed to load habits:", err);
+      }
+    };
+
+    if (user) {
+      loadHabits();
+    }
+  }, [user, currentTab]);
+
+  const handleCreateHabit = async (title) => {
+    try {
+      const newHabit = await api.createHabit(title);
+      setHabits(prev => [...prev, newHabit]);
+      addAlert("🌱 Habit added!", "success");
+    } catch (err) {
+      addAlert(`❌ Failed to create habit: ${err.message}`, "error");
+    }
+  };
+
+  const handleToggleHabit = async (id, date) => {
+    try {
+      const updated = await api.toggleHabit(id, date);
+      setHabits(prev => prev.map(h => h.id === id ? { ...h, completedToday: updated.completedToday, streak: updated.streak } : h));
+      if (updated.completedToday) {
+        addAlert("✨ Habit completed today! Keep it up!", "success");
+      }
+    } catch (err) {
+      addAlert(`❌ Failed to update habit: ${err.message}`, "error");
+    }
+  };
+
+  const handleDeleteHabit = async (id) => {
+    try {
+      await api.deleteHabit(id);
+      setHabits(prev => prev.filter(h => h.id !== id));
+      addAlert("🗑️ Habit deleted", "success");
+    } catch (err) {
+      addAlert(`❌ Failed to delete habit: ${err.message}`, "error");
+    }
+  };
 
   // Lock background scroll when any modal is open (placed after state declarations)
   useEffect(() => {
@@ -421,6 +510,10 @@ export default function App() {
         dueDate: task.due ? new Date(task.due).toISOString() : undefined,
         estimatedTime: task.estimated ?? undefined,
         tags: Array.isArray(task.tags) ? task.tags : [],
+        projectName: task.projectName,
+        energyLevel: task.energyLevel,
+        context: task.context,
+        aiConfidence: task.aiConfidence,
       };
       const created = await api.createTask(payload);
       const mapped = {
@@ -433,6 +526,11 @@ export default function App() {
         estimated: created.estimatedTime,
         dependencies: created.dependencyIds || [],
         createdAt: created.createdAt ? new Date(created.createdAt) : new Date(),
+        projectName: created.projectName,
+        energyLevel: created.energyLevel,
+        context: created.context,
+        aiConfidence: created.aiConfidence,
+        postponedCount: created.postponedCount || 0,
       };
       setTasks((prev) => ({
         ...prev,
@@ -475,6 +573,11 @@ export default function App() {
         tags: Array.isArray(task.tags) ? task.tags : [],
         estimated: task.estimated ?? undefined,
         createdAt: new Date(),
+        projectName: task.projectName,
+        energyLevel: task.energyLevel,
+        context: task.context,
+        aiConfidence: task.aiConfidence,
+        postponedCount: 0,
       };
       setTasks((prev) => ({
         ...prev,
@@ -489,6 +592,10 @@ export default function App() {
           dueDate: task.due ? new Date(task.due).toISOString() : undefined,
           estimatedTime: task.estimated ?? undefined,
           tags: Array.isArray(task.tags) ? task.tags : [],
+          projectName: task.projectName,
+          energyLevel: task.energyLevel,
+          context: task.context,
+          aiConfidence: task.aiConfidence,
         }
       });
       cacheTasks((prev => prev));
@@ -513,6 +620,10 @@ export default function App() {
         dueDate: updatedTask.due ? new Date(updatedTask.due).toISOString() : undefined,
         estimatedTime: updatedTask.estimated ?? undefined,
         tags: Array.isArray(updatedTask.tags) ? updatedTask.tags : [],
+        projectName: updatedTask.projectName,
+        energyLevel: updatedTask.energyLevel,
+        context: updatedTask.context,
+        aiConfidence: updatedTask.aiConfidence,
       };
       const saved = await api.updateTask(updatedTask.id, payload);
       setTasks((prev) => {
@@ -530,6 +641,11 @@ export default function App() {
           due: saved.dueDate ? new Date(saved.dueDate) : undefined,
           tags: saved.tags || [],
           estimated: saved.estimatedTime,
+          projectName: saved.projectName,
+          energyLevel: saved.energyLevel,
+          context: saved.context,
+          aiConfidence: saved.aiConfidence,
+          postponedCount: saved.postponedCount || 0,
         };
         if (targetQuadrant === fromQ) {
           const arr = [...next[fromQ]];
@@ -587,6 +703,10 @@ export default function App() {
           due: updatedTask.due ? new Date(updatedTask.due) : undefined,
           tags: Array.isArray(updatedTask.tags) ? updatedTask.tags : [],
           estimated: updatedTask.estimated ?? old.estimated,
+          projectName: updatedTask.projectName,
+          energyLevel: updatedTask.energyLevel,
+          context: updatedTask.context,
+          aiConfidence: updatedTask.aiConfidence,
         };
         if (targetQuadrant === fromQ) {
           const arr = [...next[fromQ]];
@@ -611,6 +731,10 @@ export default function App() {
           dueDate: updatedTask.due ? new Date(updatedTask.due).toISOString() : undefined,
           estimatedTime: updatedTask.estimated ?? undefined,
           tags: Array.isArray(updatedTask.tags) ? updatedTask.tags : [],
+          projectName: updatedTask.projectName,
+          energyLevel: updatedTask.energyLevel,
+          context: updatedTask.context,
+          aiConfidence: updatedTask.aiConfidence,
         }
       });
       cacheTasks((prev => prev));
@@ -645,6 +769,16 @@ export default function App() {
       return next;
     });
 
+    // dynamic AI toast reasoning recommendation feedback
+    const quadNames = { q1: "Q1 Do First", q2: "Q2 Schedule", q3: "Q3 Delegate", q4: "Q4 Eliminate" };
+    const reasons = {
+      q1: "High urgency demands immediate execution.",
+      q2: "Proactive growth, schedules ahead of crisis.",
+      q3: "Urgent but lower focus value, check delegation.",
+      q4: "Distracting task, eliminated/postponed."
+    };
+    addAlert(`💡 AI Coach: Moved to ${quadNames[toQuadrant]}. Reason: ${reasons[toQuadrant]} [✔ Recommended]`, 'success');
+
     // 2. Persist to backend
     try {
       const payload = {
@@ -655,6 +789,10 @@ export default function App() {
         dueDate: task.due ? new Date(task.due).toISOString() : undefined,
         estimatedTime: task.estimated ?? undefined,
         tags: task.tags || [],
+        projectName: task.projectName,
+        energyLevel: task.energyLevel,
+        context: task.context,
+        aiConfidence: task.aiConfidence,
       };
       await api.updateTask(task.id, payload);
     } catch (err) {
@@ -902,6 +1040,7 @@ export default function App() {
       user={user}
       streak={streak}
       onLogout={handleLogout}
+      onSearchClick={() => setShowSearch(true)}
     >
       <motion.div key={currentTab} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.15 }}>
         {currentTab === 'today' && (
@@ -912,6 +1051,11 @@ export default function App() {
               setFocusTask(task);
             }}
             onComplete={handleComplete}
+            onUpdateTask={saveEditedTask}
+            habits={habits}
+            onCreateHabit={handleCreateHabit}
+            onToggleHabit={handleToggleHabit}
+            onDeleteHabit={handleDeleteHabit}
             theme={theme}
           />
         )}
@@ -945,6 +1089,15 @@ export default function App() {
               Start Planning Focus Session
             </button>
           </div>
+        )}
+
+        {currentTab === 'calendar' && (
+          <CalendarView
+            tasks={tasks}
+            onUpdateTask={saveEditedTask}
+            onStartFocus={(task) => setFocusTask(task)}
+            theme={theme}
+          />
         )}
 
         {/* Undo Snackbar */}
@@ -1133,8 +1286,8 @@ export default function App() {
             </div>
 
             {/* Appearance settings */}
-            <div className="p-4 rounded-2xl border border-border-subtle bg-background-surface shadow-sm transition-colors">
-              <h3 className="font-semibold text-sm mb-2.5">Appearance</h3>
+            <div className="p-4 rounded-2xl border border-border-subtle bg-background-surface shadow-sm transition-colors space-y-4">
+              <h3 className="font-semibold text-sm">Appearance</h3>
               <div className="flex items-center justify-between">
                 <span className="text-xs text-text-muted font-semibold">Theme Mode</span>
                 <div className="flex items-center gap-2">
@@ -1156,6 +1309,76 @@ export default function App() {
                   >
                     Dark
                   </button>
+                </div>
+              </div>
+
+              {/* Theme overrides rewards */}
+              <div className="border-t border-border-subtle/50 pt-3.5 space-y-2">
+                <span className="text-xs text-text-muted font-bold block">✨ Premium Theme Overrides</span>
+                <div className="grid grid-cols-1 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      applyCustomTheme('default');
+                      addAlert('Applied Default Indigo Theme!', 'success');
+                    }}
+                    className="w-full p-2 rounded-xl border border-border-subtle bg-background-elevated/40 hover:bg-background-elevated flex items-center justify-between text-[11px] font-bold"
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-3.5 h-3.5 rounded-full bg-[#7c3aed]" />
+                      <span>Default Indigo</span>
+                    </span>
+                  </button>
+
+                  {level >= 3 ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        applyCustomTheme('mint');
+                        addAlert('Applied Emerald Mint Theme!', 'success');
+                      }}
+                      className="w-full p-2 rounded-xl border border-border-subtle bg-background-elevated/40 hover:bg-background-elevated flex items-center justify-between text-[11px] font-bold"
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-3.5 h-3.5 rounded-full bg-[#10b981]" />
+                        <span>Emerald Mint</span>
+                      </span>
+                      <span className="text-[9px] text-brand-primary font-bold">UNLOCKED</span>
+                    </button>
+                  ) : (
+                    <div className="w-full p-2 rounded-xl border border-border-subtle/30 bg-background-elevated/10 opacity-50 flex items-center justify-between text-[11px] font-bold text-text-muted">
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-3.5 h-3.5 rounded-full bg-[#10b981]/50" />
+                        <span>Emerald Mint</span>
+                      </span>
+                      <span className="text-[9px]">🔒 Lvl 3 Reward</span>
+                    </div>
+                  )}
+
+                  {level >= 5 ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        applyCustomTheme('sunset');
+                        addAlert('Applied Midnight Sunset Theme!', 'success');
+                      }}
+                      className="w-full p-2 rounded-xl border border-border-subtle bg-background-elevated/40 hover:bg-background-elevated flex items-center justify-between text-[11px] font-bold"
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-3.5 h-3.5 rounded-full bg-[#f97316]" />
+                        <span>Midnight Sunset</span>
+                      </span>
+                      <span className="text-[9px] text-brand-primary font-bold">UNLOCKED</span>
+                    </button>
+                  ) : (
+                    <div className="w-full p-2 rounded-xl border border-border-subtle/30 bg-background-elevated/10 opacity-50 flex items-center justify-between text-[11px] font-bold text-text-muted">
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-3.5 h-3.5 rounded-full bg-[#f97316]/50" />
+                        <span>Midnight Sunset</span>
+                      </span>
+                      <span className="text-[9px]">🔒 Lvl 5 Reward</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -1354,6 +1577,17 @@ export default function App() {
               awardXp(20);
             }
           }}
+          theme={theme}
+        />
+      )}
+
+      {/* Universal Search overlay */}
+      {showSearch && (
+        <SearchModal
+          tasks={tasks}
+          onClose={() => setShowSearch(false)}
+          onEditTask={handleEdit}
+          onStartFocus={(task) => setFocusTask(task)}
           theme={theme}
         />
       )}

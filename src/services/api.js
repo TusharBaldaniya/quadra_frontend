@@ -70,6 +70,12 @@ export const api = {
   linkPartner: (partnerId) => request('/gamification/partner/link', { method: 'POST', body: JSON.stringify({ partnerId }) }),
   sendPartnerCheer: (message) => request('/gamification/partner/cheer', { method: 'POST', body: JSON.stringify({ message }) }),
   getGamificationStats: () => request('/gamification/stats'),
+  
+  // Habits Tracker
+  getHabits: () => request('/habits'),
+  createHabit: (title) => request('/habits', { method: 'POST', body: JSON.stringify({ title }) }),
+  toggleHabit: (id, date) => request(`/habits/${id}/toggle`, { method: 'POST', body: JSON.stringify({ date }) }),
+  deleteHabit: (id) => request(`/habits/${id}`, { method: 'DELETE' }),
 
   // Analytics
   getSummary: () => request('/analytics/summary'),

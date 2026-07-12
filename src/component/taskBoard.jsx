@@ -242,7 +242,12 @@ export default function TaskBoard({ tasks, setTasks, onEdit, onDelete, onComplet
           {quadrants.map((q, index) => {
             const config = quadrantConfig[q.id];
             const Icon = config.icon;
-            const taskCount = (tasks[q.id] || []).filter((t) => t.status !== 'completed').length;
+            const activeTasks = (tasks[q.id] || []).filter((t) => t.status !== 'completed');
+            const taskCount = activeTasks.length;
+            const totalMins = activeTasks.reduce((acc, t) => acc + (t.estimated || 0), 0);
+            const formattedDuration = totalMins >= 60 
+              ? `${Math.floor(totalMins / 60)}h ${totalMins % 60}m` 
+              : `${totalMins}m`;
 
             return (
               <motion.div
@@ -275,18 +280,28 @@ export default function TaskBoard({ tasks, setTasks, onEdit, onDelete, onComplet
                             <h2 className={`font-display font-bold ${compact ? 'text-sm' : 'text-base sm:text-lg'} ${isDark ? 'text-text-primary' : config.textColor}`}>
                               {config.title}
                             </h2>
-                            <p className={`font-medium ${compact ? 'text-[11px]' : 'text-xs sm:text-sm'} ${isDark ? 'text-text-muted' : config.textColor} opacity-80`}>
-                              {config.subtitle}
-                            </p>
+                            <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                              <span className={`font-extrabold px-1.5 py-0.2 rounded text-[9px] text-white ${config.accentColor}`}>
+                                {config.subtitle}
+                              </span>
+                              <span className="text-[10px] font-bold text-text-muted">
+                                {taskCount} {taskCount === 1 ? 'Task' : 'Tasks'}
+                              </span>
+                              {totalMins > 0 && (
+                                <span className="text-[10px] font-bold text-text-muted">
+                                  • {formattedDuration}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
-                        <div className={`${config.accentColor} ${compact ? 'px-2.5 py-0.5 text-xs' : 'px-3 py-1 text-xs sm:text-sm'} rounded-full text-white font-bold shadow-md`}>
-                          {taskCount}
+                        <div className={`px-2.5 py-1 text-[10px] rounded-full text-white font-extrabold shadow-sm ${config.accentColor} bg-opacity-90`}>
+                          {q.id === 'q1' ? 'Finish Today' : q.id === 'q2' ? 'Plan & Schedule' : q.id === 'q3' ? 'Delegate Task' : 'Eliminate'}
                         </div>
                       </div>
 
                       {/* Description */}
-                      <p className={`text-xs ${isDark ? 'text-text-muted/80' : config.textColor} opacity-80 mb-3 sm:mb-4`}>
+                      <p className={`text-xs ${isDark ? 'text-text-muted/80' : config.textColor} opacity-70 mb-3 sm:mb-4`}>
                         {config.description}
                       </p>
 

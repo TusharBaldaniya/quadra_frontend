@@ -11,15 +11,15 @@ const audioTracks = [
 ];
 
 export default function FocusMode({ activeTask, onClose, onSessionComplete, theme = "dark" }) {
-  const isDark = theme === "dark";
+
 
   // Stages: 'planning' | 'active' | 'success'
   const [stage, setStage] = useState("planning");
 
   // Focus properties
   const [task, setTask] = useState(activeTask || { title: "Deep Work Session", id: null });
-  const [sessionTime, setSessionTime] = useState(1500); // 25 min default in seconds
-  const [totalDuration, setTotalDuration] = useState(1500);
+  const [sessionTime, setSessionTime] = useState(1800); // 30 min default in seconds
+  const [totalDuration, setTotalDuration] = useState(1800);
 
   const [isActive, setIsActive] = useState(false);
   const [showMusicMenu, setShowMusicMenu] = useState(false);
@@ -133,7 +133,7 @@ export default function FocusMode({ activeTask, onClose, onSessionComplete, them
   };
 
   // SVG Progress Calculations
-  const radius = 90;
+  const radius = 95;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (sessionTime / totalDuration) * circumference;
 
@@ -143,25 +143,28 @@ export default function FocusMode({ activeTask, onClose, onSessionComplete, them
     return `${String(mins).padStart(2, "0")}:${String(remainder).padStart(2, "0")}`;
   };
 
+  // Sunsama-style break calculation (e.g. 5 minutes before end of a 30 min block)
+  const breakTimeRemaining = Math.max(0, sessionTime - 300); // 5 min buffer
+
   return (
-    <div className="fixed inset-0 bg-background-deep z-50 overflow-hidden flex flex-col items-center justify-between p-6 font-body text-text-primary">
+    <div className="fixed inset-0 bg-slate-950 z-50 overflow-hidden flex flex-col items-center justify-between p-6 font-body text-slate-100">
       {/* Background radial glow */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.08)_0%,transparent_70%)] pointer-events-none" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.12)_0%,transparent_80%)] pointer-events-none" />
 
       {/* Top Header Actions */}
       <div className="w-full max-w-md flex items-center justify-between z-10 pt-safe">
         <button
           onClick={handleMuteToggle}
-          className="w-10 h-10 rounded-full border border-border-subtle bg-background-surface/80 flex items-center justify-center text-text-muted hover:text-text-primary active:scale-95 transition-all"
+          className="w-10 h-10 rounded-full border border-slate-800 bg-slate-900/80 flex items-center justify-center text-slate-400 hover:text-white active:scale-95 transition-all"
         >
           {isMuted ? <FiVolumeX size={18} /> : <FiVolume2 size={18} />}
         </button>
 
-        <span className="font-display font-bold text-sm tracking-wide text-brand-primary uppercase">AI Focus Coach</span>
+        <span className="font-display font-bold text-xs tracking-widest text-brand-primary uppercase">AI Focus Coach</span>
 
         <button
           onClick={onClose}
-          className="w-10 h-10 rounded-full border border-border-subtle bg-background-surface/80 flex items-center justify-center text-text-muted hover:text-text-primary active:scale-95 transition-all"
+          className="w-10 h-10 rounded-full border border-slate-800 bg-slate-900/80 flex items-center justify-center text-slate-400 hover:text-white active:scale-95 transition-all"
         >
           <FiX size={18} />
         </button>
@@ -177,33 +180,33 @@ export default function FocusMode({ activeTask, onClose, onSessionComplete, them
             exit={{ opacity: 0, scale: 0.95 }}
             className="flex-1 flex flex-col items-center justify-center w-full max-w-md gap-6 z-10 px-4 text-center"
           >
-            <div className="w-16 h-16 bg-purple-500/10 text-purple-500 rounded-3xl flex items-center justify-center text-3xl shadow-lg shadow-purple-500/5">
+            <div className="w-16 h-16 bg-purple-500/10 text-purple-400 border border-purple-500/20 rounded-3xl flex items-center justify-center text-3xl shadow-lg shadow-purple-500/5">
               🎯
             </div>
             
             <div className="space-y-1">
               <h2 className="text-xl font-bold font-display">What will you accomplish?</h2>
-              <p className="text-xs text-text-muted">Enter focus goal or review task selection</p>
+              <p className="text-xs text-slate-400">Review focus target and plan duration</p>
             </div>
 
             <input
               type="text"
               value={task.title}
               onChange={(e) => setTask({ ...task, title: e.target.value })}
-              className="w-full p-4 rounded-2xl border border-border-subtle bg-background-surface text-text-primary font-bold text-center text-sm focus:border-brand-primary outline-none"
+              className="w-full p-4 rounded-2xl border border-slate-800 bg-slate-900 text-white font-bold text-center text-sm focus:border-brand-primary outline-none"
               placeholder="e.g. Code auth forms"
             />
 
             {/* Duration selector slider */}
             <div className="w-full space-y-2 mt-2">
-              <div className="flex justify-between text-xs font-bold text-text-muted">
+              <div className="flex justify-between text-xs font-bold text-slate-400">
                 <span>Duration</span>
                 <span className="text-brand-primary font-extrabold">{totalDuration / 60} minutes</span>
               </div>
               <input
                 type="range"
                 min="300" // 5 mins
-                max="3600" // 60 mins
+                max="5400" // 90 mins
                 step="300" // 5 min interval
                 value={totalDuration}
                 onChange={(e) => {
@@ -211,13 +214,13 @@ export default function FocusMode({ activeTask, onClose, onSessionComplete, them
                   setTotalDuration(val);
                   setSessionTime(val);
                 }}
-                className="w-full accent-brand-primary h-2 bg-background-elevated rounded-lg appearance-none cursor-pointer"
+                className="w-full accent-brand-primary h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer"
               />
-              <div className="flex justify-between text-[10px] text-text-muted/70 font-semibold px-1">
+              <div className="flex justify-between text-[10px] text-slate-500 font-semibold px-1">
                 <span>5m</span>
                 <span>25m</span>
                 <span>45m</span>
-                <span>60m</span>
+                <span>90m</span>
               </div>
             </div>
 
@@ -238,31 +241,31 @@ export default function FocusMode({ activeTask, onClose, onSessionComplete, them
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className="flex-1 flex flex-col items-center justify-center w-full max-w-md gap-8 z-10"
+            className="flex-1 flex flex-col items-center justify-center w-full max-w-md gap-6 z-10"
           >
-            <div className="w-full text-center">
-              <p className="text-xs text-text-muted font-bold uppercase tracking-wider mb-2">Focusing On</p>
-              <h2 className="text-2xl font-bold font-display line-clamp-2 px-4 text-text-primary">
+            <div className="w-full text-center space-y-1">
+              <p className="text-[10px] text-brand-primary font-bold uppercase tracking-widest">Now Working On</p>
+              <h2 className="text-2xl font-extrabold font-display uppercase tracking-tight line-clamp-2 px-4 bg-gradient-to-r from-white via-slate-100 to-slate-300 bg-clip-text text-transparent">
                 {task.title}
               </h2>
             </div>
 
             {/* Circular Timer Display */}
-            <div className="relative w-64 h-64 flex items-center justify-center">
+            <div className="relative w-68 h-68 flex items-center justify-center">
               <svg className="absolute w-full h-full -rotate-90">
                 <circle
-                  cx="128"
-                  cy="128"
+                  cx="136"
+                  cy="136"
                   r={radius}
-                  className="stroke-background-elevated fill-none"
-                  strokeWidth="6"
+                  className="stroke-slate-900 fill-none"
+                  strokeWidth="8"
                 />
                 <motion.circle
-                  cx="128"
-                  cy="128"
+                  cx="136"
+                  cy="136"
                   r={radius}
                   className="stroke-brand-primary fill-none"
-                  strokeWidth="6"
+                  strokeWidth="8"
                   strokeLinecap="round"
                   strokeDasharray={circumference}
                   strokeDashoffset={strokeDashoffset}
@@ -270,21 +273,41 @@ export default function FocusMode({ activeTask, onClose, onSessionComplete, them
                 />
               </svg>
 
-              <div className="flex flex-col items-center justify-center select-none">
-                <span className="text-5xl font-display font-light tracking-tight text-text-primary">
+              <div className="flex flex-col items-center justify-center select-none z-10">
+                <span className="text-5xl font-display font-bold tracking-tight text-white drop-shadow-[0_0_20px_rgba(99,102,241,0.2)]">
                   {formatTime(sessionTime)}
                 </span>
-                <span className="text-[10px] text-text-muted font-bold uppercase tracking-widest mt-1">
-                  {isActive ? "Flow State" : "Paused"}
+                <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-widest mt-2 bg-slate-900/60 px-3 py-1 rounded-full border border-slate-800">
+                  {isActive ? "🔥 Flow State" : "⏸️ Paused"}
                 </span>
               </div>
+            </div>
+
+            {/* Phone locked & Relax status cards */}
+            <div className="flex flex-wrap items-center justify-center gap-2 max-w-xs text-[10px] font-bold text-slate-400">
+              <span className="px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800">🔒 Phone Locked</span>
+              <span className="px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800">🔕 Notifications Off</span>
+              <span className="px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800">🎵 Relax Music</span>
+            </div>
+
+            {/* Break countdown warning */}
+            <div className="text-center">
+              {breakTimeRemaining > 0 ? (
+                <p className="text-xs font-semibold text-slate-400">
+                  Take Break in <strong className="text-brand-primary">{formatTime(breakTimeRemaining)}</strong>
+                </p>
+              ) : (
+                <p className="text-xs font-bold text-emerald-400 animate-pulse">
+                  🧘 Time for a short break!
+                </p>
+              )}
             </div>
 
             {/* Music selector toggle */}
             <div className="relative">
               <button
                 onClick={() => setShowMusicMenu(!showMusicMenu)}
-                className="flex items-center gap-2 px-4 py-2 rounded-full border border-border-subtle bg-background-surface/80 text-xs font-semibold text-text-muted hover:text-text-primary hover:bg-background-elevated transition-all"
+                className="flex items-center gap-2 px-4 py-2 rounded-full border border-slate-800 bg-slate-900/80 text-xs font-bold text-slate-400 hover:text-white hover:bg-slate-850 transition-all"
               >
                 <FiMusic size={14} className="text-brand-primary animate-pulse" />
                 <span>{audioTracks.find((t) => t.id === selectedTrack)?.label || "Audio"}</span>
@@ -296,7 +319,8 @@ export default function FocusMode({ activeTask, onClose, onSessionComplete, them
                     initial={{ opacity: 0, y: 10, scale: 0.95 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                    className="absolute left-1/2 -translate-x-1/2 bottom-full mb-3 w-48 rounded-2xl border border-border-subtle bg-background-surface shadow-2xl p-1 z-20 flex flex-col gap-0.5"
+                    className="absolute left-1/2 -translate-x-1/2 bottom-full mb-3 w-48 rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl p-1 z-20 flex flex-col gap-0.5"
+                    onClick={(e) => e.stopPropagation()}
                   >
                     {audioTracks.map((track) => (
                       <button
@@ -307,8 +331,8 @@ export default function FocusMode({ activeTask, onClose, onSessionComplete, them
                         }}
                         className={`w-full px-3 py-2 text-left text-xs font-bold rounded-xl transition-all ${
                           selectedTrack === track.id
-                            ? "bg-background-elevated text-brand-primary"
-                            : "text-text-muted hover:bg-background-elevated/50 hover:text-text-primary"
+                            ? "bg-slate-800 text-brand-primary"
+                            : "text-slate-400 hover:bg-slate-850 hover:text-white"
                         }`}
                       >
                         {track.label}
@@ -330,23 +354,21 @@ export default function FocusMode({ activeTask, onClose, onSessionComplete, them
             exit={{ opacity: 0, scale: 0.95 }}
             className="flex-1 flex flex-col items-center justify-center w-full max-w-sm gap-6 z-10 px-4 text-center"
           >
-            <div className="w-16 h-16 bg-green-500/10 text-green-500 border border-green-500/20 rounded-3xl flex items-center justify-center mx-auto text-3xl shadow-lg">
+            <div className="w-16 h-16 bg-green-500/10 text-green-400 border border-green-500/20 rounded-3xl flex items-center justify-center mx-auto text-3xl shadow-lg">
               🔥
             </div>
             
             <div className="space-y-1">
-              <h2 className="text-2xl font-bold font-display text-text-primary">Great work!</h2>
-              <p className="text-xs text-text-muted">
+              <h2 className="text-2xl font-bold font-display text-white">Great work!</h2>
+              <p className="text-xs text-slate-400">
                 Focused: <span className="text-brand-primary font-bold">{Math.round((totalDuration - sessionTime) / 60)} minutes</span>
               </p>
-              <p className="text-[10px] text-green-500 font-bold uppercase tracking-wider mt-1">✨ Earned +20 XP</p>
+              <p className="text-[10px] text-green-400 font-bold uppercase tracking-wider mt-1">✨ Earned +20 XP</p>
             </div>
 
-            <div className={`w-full p-5 rounded-3xl border ${
-              isDark ? 'bg-background-surface border-border-subtle' : 'bg-white border-slate-100 shadow-sm'
-            } space-y-4`}>
-              <h3 className="text-sm font-bold text-text-primary">Did you complete this task?</h3>
-              <p className="text-xs text-text-muted italic">"{task.title}"</p>
+            <div className="w-full p-5 rounded-3xl border bg-slate-900 border-slate-800 space-y-4 shadow-xl">
+              <h3 className="text-sm font-bold text-white">Did you complete this task?</h3>
+              <p className="text-xs text-slate-400 italic">"{task.title}"</p>
               
               <div className="flex flex-col gap-2">
                 <button
@@ -359,9 +381,7 @@ export default function FocusMode({ activeTask, onClose, onSessionComplete, them
                 
                 <button
                   onClick={() => handleCollectRewards(false)}
-                  className={`w-full py-3 ${
-                    isDark ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                  } text-xs font-bold rounded-2xl active:scale-95 transition-all`}
+                  className="w-full py-3 bg-slate-850 hover:bg-slate-800 text-slate-300 text-xs font-bold rounded-2xl active:scale-95 transition-all"
                 >
                   NO, NEED MORE TIME
                 </button>
@@ -376,7 +396,7 @@ export default function FocusMode({ activeTask, onClose, onSessionComplete, them
         <div className="w-full max-w-md flex items-center justify-center gap-6 z-10 pb-safe">
           <button
             onClick={resetTimer}
-            className="w-12 h-12 rounded-full border border-border-subtle bg-background-surface/80 flex items-center justify-center text-text-muted hover:text-text-primary hover:border-red-500/30 hover:text-red-500 active:scale-95 transition-all"
+            className="w-12 h-12 rounded-full border border-slate-850 bg-slate-900/80 flex items-center justify-center text-slate-400 hover:text-red-400 hover:border-red-500/30 active:scale-95 transition-all"
             title="Cancel session"
           >
             <FiSquare size={18} />
@@ -394,7 +414,7 @@ export default function FocusMode({ activeTask, onClose, onSessionComplete, them
 
           <button
             onClick={handleTimerComplete}
-            className="w-12 h-12 rounded-full border border-border-subtle bg-background-surface/80 flex items-center justify-center text-text-muted hover:text-text-primary hover:border-green-500/30 hover:text-green-500 active:scale-95 transition-all"
+            className="w-12 h-12 rounded-full border border-slate-850 bg-slate-900/80 flex items-center justify-center text-slate-400 hover:text-green-400 hover:border-green-500/30 active:scale-95 transition-all"
             title="Complete session early"
           >
             <FiAward size={18} />

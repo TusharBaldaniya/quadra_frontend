@@ -1,34 +1,9 @@
 import React, { useState } from "react";
 import { api } from "../services/api";
 import { motion, AnimatePresence } from "framer-motion";
-import { FiFlag, FiClock, FiCheck, FiX, FiZap, FiHelpCircle, FiRepeat } from "react-icons/fi";
+import { FiFlag, FiClock, FiCheck, FiX, FiZap, FiHelpCircle, FiRepeat, FiSettings } from "react-icons/fi";
 
-const priorityOptions = [
-  {
-    value: "High",
-    label: "High Priority",
-    icon: FiFlag,
-    color: "from-rose-500 to-red-600",
-    bgColor: "bg-rose-50 dark:bg-rose-950/20",
-    textColor: "text-rose-700 dark:text-rose-400"
-  },
-  {
-    value: "Medium", 
-    label: "Medium Priority",
-    icon: FiClock,
-    color: "from-amber-500 to-orange-600",
-    bgColor: "bg-amber-50 dark:bg-amber-950/20",
-    textColor: "text-amber-700 dark:text-amber-400"
-  },
-  {
-    value: "Low",
-    label: "Low Priority", 
-    icon: FiCheck,
-    color: "from-emerald-500 to-green-600",
-    bgColor: "bg-emerald-50 dark:bg-emerald-950/20",
-    textColor: "text-emerald-700 dark:text-emerald-400"
-  }
-];
+
 
 export default function TaskModal({ addTask, onClose, tasks = {} }) {
   // Mode tabs: 'manual', 'ai', 'wizard'
@@ -43,15 +18,27 @@ export default function TaskModal({ addTask, onClose, tasks = {} }) {
   const [estimated, setEstimated] = useState(""); 
   const [quadrantChoice, setQuadrantChoice] = useState("q2"); 
   const [dependencies, setDependencies] = useState(""); 
+  
+  // New task coaching fields
+  const [energyLevel, setEnergyLevel] = useState("Medium");
+  const [context, setContext] = useState("General");
+  const [projectName, setProjectName] = useState("Personal");
+  const [aiConfidence, setAiConfidence] = useState(90);
+
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // AI Magic states
+  // Inline AI suggestion states
+  const [aiSuggestion, setAiSuggestion] = useState(null);
+  const [isAnalyzingSuggestion, setIsAnalyzingSuggestion] = useState(false);
+
+  // AI Magic tab states
   const [aiInput, setAiInput] = useState("");
   const [isAnalyzingAI, setIsAnalyzingAI] = useState(false);
   const [aiLogMsg, setAiLogMsg] = useState("");
 
   // Eisenhower Wizard states
-  const [wizardStep, setWizardStep] = useState(1); // 1 = Importance, 2 = Urgency
+  const [wizardStep, setWizardStep] = useState(1); 
   const [wizardImportant, setWizardImportant] = useState(null);
 
   // Recurring settings
@@ -82,6 +69,53 @@ export default function TaskModal({ addTask, onClose, tasks = {} }) {
     }
   };
 
+  const handleFetchSuggestion = async () => {
+    if (!title.trim()) return;
+    setIsAnalyzingSuggestion(true);
+    setAiSuggestion(null);
+    try {
+      const parsed = await api.analyzeTask(title.trim());
+      if (parsed) {
+        setAiSuggestion(parsed);
+      }
+    } catch (err) {
+      console.error("Failed to fetch suggestions:", err);
+    } finally {
+      setIsAnalyzingSuggestion(false);
+    }
+  };
+
+  const handleApplySuggestion = () => {
+    if (!aiSuggestion) return;
+    setQuadrantChoice(aiSuggestion.quadrant || "q2");
+    setPriority(aiSuggestion.priority || "Medium");
+    setEstimated(String(aiSuggestion.estimatedTime || 30));
+    setEnergyLevel(aiSuggestion.energyLevel || "Medium");
+    setContext(aiSuggestion.context || "General");
+    setProjectName(aiSuggestion.projectName || "Personal");
+    setAiConfidence(aiSuggestion.aiConfidence || 90);
+
+    if (aiSuggestion.deadline) {
+      try {
+        const dateOnly = new Date(aiSuggestion.deadline).toISOString().slice(0, 10);
+        setDue(dateOnly);
+      } catch {
+        setDue("");
+      }
+    } else {
+      setDue("");
+    }
+
+    if (aiSuggestion.reason) {
+      setDescription(prev => {
+        const base = prev.trim();
+        return base ? `${base}\n\n💡 AI Reasoning: ${aiSuggestion.reason}` : `💡 AI Reasoning: ${aiSuggestion.reason}`;
+      });
+    }
+
+    setAiSuggestion(null);
+  };
+
   const handleAIClassify = async () => {
     if (!aiInput.trim()) return;
     setIsAnalyzingAI(true);
@@ -92,6 +126,11 @@ export default function TaskModal({ addTask, onClose, tasks = {} }) {
         setTitle(parsed.title || aiInput.trim());
         setQuadrantChoice(parsed.quadrant || "q2");
         setPriority(parsed.priority || "Medium");
+        setEstimated(String(parsed.estimatedTime || 30));
+        setEnergyLevel(parsed.energyLevel || "Medium");
+        setContext(parsed.context || "General");
+        setProjectName(parsed.projectName || "Personal");
+        setAiConfidence(parsed.aiConfidence || 90);
         
         if (parsed.deadline) {
           try {
@@ -112,7 +151,7 @@ export default function TaskModal({ addTask, onClose, tasks = {} }) {
         }
         
         setAiLogMsg("✨ Parsed successfully! Form pre-filled.");
-        setTimeout(() => setActiveMode("manual"), 1200); // Switch to review form
+        setTimeout(() => setActiveMode("manual"), 1200); 
       }
     } catch (err) {
       console.error(err);
@@ -127,7 +166,6 @@ export default function TaskModal({ addTask, onClose, tasks = {} }) {
       setWizardImportant(val);
       setWizardStep(2);
     } else {
-      // Step 2 answer: calculate quadrant
       const isImportant = wizardImportant;
       const isUrgent = val;
       let finalQuad = 'q2';
@@ -139,7 +177,6 @@ export default function TaskModal({ addTask, onClose, tasks = {} }) {
 
       setQuadrantChoice(finalQuad);
       setAiLogMsg(`🎯 Wizard set quadrant to ${finalQuad.toUpperCase()}!`);
-      // Reset wizard
       setWizardStep(1);
       setWizardImportant(null);
       setActiveMode("manual");
@@ -170,6 +207,10 @@ export default function TaskModal({ addTask, onClose, tasks = {} }) {
       recurringPattern: recurringEnabled ? recurringPattern : undefined,
       recurringInterval: recurringEnabled ? Number(recurringInterval) : undefined,
       recurringEndDate: recurringEnabled && recurringEndDate ? new Date(recurringEndDate) : undefined,
+      energyLevel,
+      context,
+      projectName,
+      aiConfidence,
     };
 
     addTask(task, quadrantChoice);
@@ -183,6 +224,10 @@ export default function TaskModal({ addTask, onClose, tasks = {} }) {
     setEstimated("");
     setQuadrantChoice("q2");
     setDependencies("");
+    setEnergyLevel("Medium");
+    setContext("General");
+    setProjectName("Personal");
+    setAiConfidence(90);
     setRecurringEnabled(false);
     setRecurringPattern("Daily");
     setRecurringInterval(1);
@@ -296,9 +341,7 @@ export default function TaskModal({ addTask, onClose, tasks = {} }) {
                 {isAnalyzingAI ? (
                   <>
                     <motion.div
-                      className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"
-                      animate={{ rotate: 360 }}
-                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                      className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"
                     />
                     <span>Classifying with Gemini AI...</span>
                   </>
@@ -390,11 +433,21 @@ export default function TaskModal({ addTask, onClose, tasks = {} }) {
                 </div>
               )}
 
-              {/* Task Title */}
+              {/* Task Title with Inline AI coach classifier */}
               <div>
-                <label className="block text-xs font-semibold text-text-muted mb-1.5">
-                  Task Title
-                </label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-semibold text-text-muted">
+                    Task Title
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleFetchSuggestion}
+                    disabled={title.trim().length < 4 || isAnalyzingSuggestion}
+                    className="text-[9px] font-extrabold text-brand-primary hover:text-purple-400 disabled:opacity-40 flex items-center gap-0.5"
+                  >
+                    {isAnalyzingSuggestion ? "⚡ Analyzing..." : "⚡ Suggest Details"}
+                  </button>
+                </div>
                 <input
                   type="text"
                   placeholder="What needs to be done?"
@@ -404,6 +457,39 @@ export default function TaskModal({ addTask, onClose, tasks = {} }) {
                   required
                 />
               </div>
+
+              {/* AI Coaching Inline Suggestion Drawer */}
+              <AnimatePresence>
+                {aiSuggestion && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="p-3 bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/25 rounded-2xl text-[10px] space-y-2"
+                  >
+                    <div className="flex justify-between items-start font-bold">
+                      <span className="text-purple-400">💡 AI Coach Proposal (Conf: {aiSuggestion.aiConfidence}%)</span>
+                      <button
+                        type="button"
+                        onClick={() => setAiSuggestion(null)}
+                        className="text-text-muted hover:text-white"
+                      >
+                        <FiX size={10} />
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-text-primary leading-normal">
+                      Eisenhower: <strong>{aiSuggestion.quadrant.toUpperCase()} ({aiSuggestion.projectName})</strong>. Est: <strong>{aiSuggestion.estimatedTime} min</strong>. Reason: <em>{aiSuggestion.reason}</em>
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleApplySuggestion}
+                      className="w-full py-1.5 bg-brand-primary text-white font-extrabold rounded-xl active:scale-98 text-[10px]"
+                    >
+                      APPLY RECOMMENDATIONS
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               {/* Description */}
               <div>
@@ -428,55 +514,36 @@ export default function TaskModal({ addTask, onClose, tasks = {} }) {
                 />
               </div>
 
-              {/* Priority */}
-              <div>
-                <label className="block text-xs font-semibold text-text-muted mb-2">
-                  Priority Level
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {priorityOptions.map((option) => {
-                    const Icon = option.icon;
-                    const isSelected = priority === option.value;
-                    
-                    return (
-                      <button
-                        key={option.value}
-                        type="button"
-                        onClick={() => setPriority(option.value)}
-                        className={`py-2 px-1.5 rounded-xl border transition-all flex flex-col justify-center items-center ${
-                          isSelected 
-                            ? `border-brand-primary bg-gradient-to-r ${option.color} text-white shadow-sm` 
-                            : `border-border-subtle ${option.bgColor} hover:border-brand-primary/40`
-                        }`}
-                      >
-                        <Icon className={`text-xs mx-auto mb-1 ${isSelected ? 'text-white' : option.textColor}`} />
-                        <div className={`text-[9px] font-bold ${isSelected ? 'text-white' : option.textColor}`}>
-                          {option.label.split(' ')[0]}
-                        </div>
-                      </button>
-                    );
-                  })}
+              {/* Priority & Quadrant */}
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[10px] font-semibold text-text-muted mb-1">Priority</label>
+                  <select
+                    className="w-full p-2 rounded-xl border border-border-subtle bg-background-elevated text-text-primary outline-none text-xs font-bold"
+                    value={priority}
+                    onChange={(e) => setPriority(e.target.value)}
+                  >
+                    <option value="High">🔥 High</option>
+                    <option value="Medium">⚡ Medium</option>
+                    <option value="Low">💤 Low</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-semibold text-text-muted mb-1">Eisenhower Matrix</label>
+                  <select
+                    className="w-full p-2 rounded-xl border border-border-subtle bg-background-elevated text-text-primary outline-none text-xs font-bold"
+                    value={quadrantChoice}
+                    onChange={(e) => setQuadrantChoice(e.target.value)}
+                  >
+                    <option value="q1">Q1 - Do First</option>
+                    <option value="q2">Q2 - Schedule</option>
+                    <option value="q3">Q3 - Delegate</option>
+                    <option value="q4">Q4 - Eliminate</option>
+                  </select>
                 </div>
               </div>
 
-              {/* Quadrant Selection */}
-              <div>
-                <label className="block text-xs font-semibold text-text-muted mb-1.5">
-                  Eisenhower Quadrant
-                </label>
-                <select
-                  className="w-full p-2.5 rounded-xl border border-border-subtle bg-background-elevated text-text-primary focus:border-brand-primary outline-none text-xs"
-                  value={quadrantChoice}
-                  onChange={(e) => setQuadrantChoice(e.target.value)}
-                >
-                  <option value="q1">Q1 - Do First (Urgent & Important)</option>
-                  <option value="q2">Q2 - Schedule (Not Urgent & Important)</option>
-                  <option value="q3">Q3 - Delegate (Urgent & Not Important)</option>
-                  <option value="q4">Q4 - Eliminate (Not Urgent & Not Important)</option>
-                </select>
-              </div>
-
-              {/* Due Date & Estimate */}
+              {/* Due Date & Category selection */}
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="block text-xs font-semibold text-text-muted mb-1">
@@ -484,114 +551,176 @@ export default function TaskModal({ addTask, onClose, tasks = {} }) {
                   </label>
                   <input
                     type="date"
-                    className="w-full p-2 rounded-xl border border-border-subtle bg-background-elevated text-text-primary focus:border-brand-primary outline-none text-xs"
+                    className="w-full p-2 rounded-xl border border-border-subtle bg-background-elevated text-text-primary focus:border-brand-primary outline-none text-xs font-bold"
                     value={due}
                     onChange={(e) => setDue(e.target.value)}
                   />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-text-muted mb-1">
-                    Estimate (mins)
+                    Project Group
                   </label>
-                  <input
-                    type="number"
-                    min="0"
-                    placeholder="e.g. 30"
-                    className="w-full p-2 rounded-xl border border-border-subtle bg-background-elevated text-text-primary focus:border-brand-primary outline-none text-xs"
-                    value={estimated}
-                    onChange={(e) => setEstimated(e.target.value)}
-                  />
+                  <select
+                    className="w-full p-2 rounded-xl border border-border-subtle bg-background-elevated text-text-primary focus:border-brand-primary outline-none text-xs font-bold"
+                    value={projectName}
+                    onChange={(e) => setProjectName(e.target.value)}
+                  >
+                    <option value="Personal">📁 Personal</option>
+                    <option value="Career">💼 Career</option>
+                    <option value="Learning">🎓 Learning</option>
+                    <option value="Health">🏃 Health</option>
+                    <option value="Finance">💰 Finance</option>
+                    <option value="General">📦 General</option>
+                  </select>
                 </div>
               </div>
 
-              {/* Recurring Tasks Trigger */}
-              <div className="p-2.5 rounded-2xl bg-background-elevated/40 border border-border-subtle/50 space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold flex items-center gap-1 text-text-primary">
-                    <FiRepeat size={12} className="text-purple-500" />
-                    <span>Recurring Task</span>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setRecurringEnabled(!recurringEnabled)}
-                    className={`w-9 h-5.5 rounded-full border p-0.5 transition-all ${
-                      recurringEnabled ? 'bg-brand-primary border-brand-primary' : 'bg-background-elevated border-border-subtle'
-                    }`}
-                  >
-                    <span className={`block w-4 h-4 bg-white rounded-full transition-transform ${recurringEnabled ? 'translate-x-3.5' : 'translate-x-0'}`} />
-                  </button>
-                </div>
+              {/* Advanced Options Toggle */}
+              <button
+                type="button"
+                onClick={() => setShowAdvanced(!showAdvanced)}
+                className="w-full text-center text-xs font-bold text-brand-primary hover:underline py-1 flex items-center justify-center gap-1"
+              >
+                <FiSettings size={12} />
+                <span>{showAdvanced ? "Hide Advanced Options" : "Show Advanced Options"}</span>
+              </button>
 
-                {recurringEnabled && (
-                  <motion.div 
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    className="grid grid-cols-2 gap-2 text-xs pt-1.5 border-t border-border-subtle/40"
+              <AnimatePresence>
+                {showAdvanced && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="overflow-hidden space-y-4 pt-1"
                   >
-                    <div>
-                      <label className="block text-[10px] text-text-muted mb-1">Repetition</label>
-                      <select
-                        value={recurringPattern}
-                        onChange={(e) => setRecurringPattern(e.target.value)}
-                        className="w-full p-2 rounded-xl border border-border-subtle bg-background-elevated text-text-primary outline-none text-xs"
-                      >
-                        <option value="Daily">Daily</option>
-                        <option value="Weekly">Weekly</option>
-                        <option value="Monthly">Monthly</option>
-                      </select>
+                    {/* Energy & Context & Estimate */}
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <label className="block text-[10px] text-text-muted mb-1">Estimate (mins)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          placeholder="30"
+                          className="w-full p-2 rounded-xl border border-border-subtle bg-background-elevated text-text-primary outline-none text-xs"
+                          value={estimated}
+                          onChange={(e) => setEstimated(e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] text-text-muted mb-1">Energy Req.</label>
+                        <select
+                          className="w-full p-2 rounded-xl border border-border-subtle bg-background-elevated text-text-primary outline-none text-xs"
+                          value={energyLevel}
+                          onChange={(e) => setEnergyLevel(e.target.value)}
+                        >
+                          <option value="High">High ⚡</option>
+                          <option value="Medium">Medium 🔋</option>
+                          <option value="Low">Low 💤</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] text-text-muted mb-1">Context</label>
+                        <select
+                          className="w-full p-2 rounded-xl border border-border-subtle bg-background-elevated text-text-primary outline-none text-xs"
+                          value={context}
+                          onChange={(e) => setContext(e.target.value)}
+                        >
+                          <option value="General">General 📦</option>
+                          <option value="Home">Home 🏠</option>
+                          <option value="Office">Office 💼</option>
+                          <option value="Laptop">Laptop 💻</option>
+                          <option value="Phone">Phone 📞</option>
+                        </select>
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-[10px] text-text-muted mb-1">Interval (Every X)</label>
-                      <input
-                        type="number"
-                        min="1"
-                        value={recurringInterval}
-                        onChange={(e) => setRecurringInterval(e.target.value)}
-                        className="w-full p-2 rounded-xl border border-border-subtle bg-background-elevated text-text-primary outline-none text-xs"
-                      />
+
+                    {/* Recurring Tasks Trigger */}
+                    <div className="p-2.5 rounded-2xl bg-background-elevated/40 border border-border-subtle/50 space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold flex items-center gap-1 text-text-primary">
+                          <FiRepeat size={12} className="text-purple-500" />
+                          <span>Recurring Task</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setRecurringEnabled(!recurringEnabled)}
+                          className={`w-9 h-5.5 rounded-full border p-0.5 transition-all ${
+                            recurringEnabled ? 'bg-brand-primary border-brand-primary' : 'bg-background-elevated border-border-subtle'
+                          }`}
+                        >
+                          <span className={`block w-4 h-4 bg-white rounded-full transition-transform ${recurringEnabled ? 'translate-x-3.5' : 'translate-x-0'}`} />
+                        </button>
+                      </div>
+
+                      {recurringEnabled && (
+                        <div className="grid grid-cols-2 gap-2 text-xs pt-1.5 border-t border-border-subtle/40">
+                          <div>
+                            <label className="block text-[10px] text-text-muted mb-1">Repetition</label>
+                            <select
+                              value={recurringPattern}
+                              onChange={(e) => setRecurringPattern(e.target.value)}
+                              className="w-full p-2 rounded-xl border border-border-subtle bg-background-elevated text-text-primary outline-none text-xs"
+                            >
+                              <option value="Daily">Daily</option>
+                              <option value="Weekly">Weekly</option>
+                              <option value="Monthly">Monthly</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-[10px] text-text-muted mb-1">Interval (Every X)</label>
+                            <input
+                              type="number"
+                              min="1"
+                              value={recurringInterval}
+                              onChange={(e) => setRecurringInterval(e.target.value)}
+                              className="w-full p-2 rounded-xl border border-border-subtle bg-background-elevated text-text-primary outline-none text-xs"
+                            />
+                          </div>
+                          <div className="col-span-2">
+                            <label className="block text-[10px] text-text-muted mb-1">End Date (Optional)</label>
+                            <input
+                              type="date"
+                              value={recurringEndDate}
+                              onChange={(e) => setRecurringEndDate(e.target.value)}
+                              className="w-full p-2 rounded-xl border border-border-subtle bg-background-elevated text-text-primary outline-none text-xs"
+                            />
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    <div className="col-span-2">
-                      <label className="block text-[10px] text-text-muted mb-1">End Date (Optional)</label>
-                      <input
-                        type="date"
-                        value={recurringEndDate}
-                        onChange={(e) => setRecurringEndDate(e.target.value)}
-                        className="w-full p-2 rounded-xl border border-border-subtle bg-background-elevated text-text-primary outline-none text-xs"
-                      />
+
+                    {/* Tags & Dependencies */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-xs font-semibold text-text-muted mb-1">Tags</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. work, dev"
+                          className="w-full p-2 rounded-xl border border-border-subtle bg-background-elevated text-text-primary focus:border-brand-primary outline-none text-xs"
+                          value={tags}
+                          onChange={(e) => setTags(e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-text-muted mb-1">Predecessor Title</label>
+                        <input
+                          type="text"
+                          list="task-titles"
+                          placeholder="Existing task"
+                          className="w-full p-2 rounded-xl border border-border-subtle bg-background-elevated text-text-primary focus:border-brand-primary outline-none text-xs"
+                          value={dependencies}
+                          onChange={(e) => setDependencies(e.target.value)}
+                        />
+                        <datalist id="task-titles">
+                          {Object.values(tasks).flat().map((t) => (
+                            <option key={t.id} value={t.title} />
+                          ))}
+                        </datalist>
+                      </div>
                     </div>
                   </motion.div>
                 )}
-              </div>
-
-              {/* Tags & Dependencies */}
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-xs font-semibold text-text-muted mb-1">Tags</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. work, dev"
-                    className="w-full p-2 rounded-xl border border-border-subtle bg-background-elevated text-text-primary focus:border-brand-primary outline-none text-xs"
-                    value={tags}
-                    onChange={(e) => setTags(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-text-muted mb-1">Predecessor Title</label>
-                  <input
-                    type="text"
-                    list="task-titles"
-                    placeholder="Existing task"
-                    className="w-full p-2 rounded-xl border border-border-subtle bg-background-elevated text-text-primary focus:border-brand-primary outline-none text-xs"
-                    value={dependencies}
-                    onChange={(e) => setDependencies(e.target.value)}
-                  />
-                  <datalist id="task-titles">
-                    {Object.values(tasks).flat().map((t) => (
-                      <option key={t.id} value={t.title} />
-                    ))}
-                  </datalist>
-                </div>
-              </div>
+              </AnimatePresence>
 
               {/* Submit / Cancel Buttons */}
               <div className="flex gap-2.5 pt-2">

@@ -1,4 +1,5 @@
-import { FiPlus } from "react-icons/fi";
+import React, { useState, useEffect } from "react";
+import { FiPlus, FiSearch } from "react-icons/fi";
 import BottomNav from "./bottomNav";
 
 export default function MobileShell({
@@ -16,22 +17,45 @@ export default function MobileShell({
   onInstallClick,
   onMobileInstall,
   user,
-  streak
+  streak,
+  onSearchClick
 }) {
+  const [isScrolled, setIsScrolled] = useState(false);
+  const isDark = theme === 'dark';
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 30);
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   return (
     <div className="bg-background-deep text-text-primary min-h-screen flex flex-col font-body transition-colors duration-200">
       {/* Top Status Bar Blur Shield */}
       <div 
-        className="fixed top-0 left-0 right-0 z-30 pointer-events-none backdrop-blur-md bg-background-deep/50 border-b border-white/[0.02]" 
-        style={{ height: 'calc(env(safe-area-inset-top) + 8px)' }} 
+        className={`fixed top-0 left-0 right-0 z-30 pointer-events-none backdrop-blur-md border-b transition-colors duration-200`} 
+        style={{ 
+          height: isScrolled ? 'calc(env(safe-area-inset-top) + 2px)' : 'calc(env(safe-area-inset-top) + 8px)',
+          backgroundColor: isDark ? 'rgba(12, 14, 18, 0.4)' : 'rgba(248, 250, 252, 0.4)',
+          borderColor: isDark ? 'rgba(255, 255, 255, 0.02)' : 'rgba(0, 0, 0, 0.02)'
+        }} 
       />
 
       {/* Top bar */}
-      <header className="sticky top-0 z-20 w-full px-3 pt-3" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 8px)' }}>
-        <div className="mx-auto max-w-3xl w-full px-4 py-2.5 flex items-center justify-between rounded-3xl border border-white/[0.06] bg-slate-900/60 backdrop-blur-2xl shadow-xl shadow-black/20">
-          <div className="flex items-center gap-3 min-w-0">
+      <header className={`sticky top-0 z-20 w-full transition-all duration-300 ${isScrolled ? 'px-1 pt-1' : 'px-3 pt-3'}`} style={{ paddingTop: isScrolled ? 'env(safe-area-inset-top)' : 'calc(env(safe-area-inset-top) + 8px)' }}>
+        <div className={`mx-auto max-w-3xl w-full flex items-center justify-between border shadow-xl transition-all duration-300 ${
+          isDark 
+            ? 'border-white/[0.06] bg-slate-900/60 shadow-black/20' 
+            : 'border-slate-200 bg-white/70 shadow-slate-200/30'
+        } ${isScrolled ? 'px-4 py-1.5 rounded-2xl' : 'px-4 py-2.5 rounded-3xl'}`}>
+          
+          <div className="flex items-center gap-2.5 min-w-0">
             {/* Logo in a gradient glass circle */}
-            <div className="relative flex-shrink-0 w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-500/15 to-purple-500/15 p-1 border border-white/10 flex items-center justify-center shadow-inner">
+            <div className={`relative flex-shrink-0 rounded-xl bg-gradient-to-tr from-blue-500/15 to-purple-500/15 p-1 border flex items-center justify-center shadow-inner transition-all duration-300 ${
+              isDark ? 'border-white/10' : 'border-slate-200/50'
+            } ${isScrolled ? 'w-7 h-7' : 'w-9 h-9'}`}>
               <img
                 src="/quadra-symbol-transparent.png"
                 alt="Logo"
@@ -40,24 +64,41 @@ export default function MobileShell({
             </div>
 
             <div className="min-w-0">
-              <h1 className="text-base font-extrabold font-display bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-transparent truncate tracking-tight">
+              <h1 className={`font-extrabold font-display bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-transparent truncate tracking-tight transition-all duration-300 ${isScrolled ? 'text-sm' : 'text-base'}`}>
                 {title}
               </h1>
-              {subtitle ? (
+              {subtitle && !isScrolled ? (
                 <p className="text-[10px] text-text-muted/80 truncate font-semibold uppercase tracking-wider leading-none mt-0.5">{subtitle}</p>
               ) : null}
             </div>
           </div>
 
           {/* Right side header actions */}
-          <div className="flex items-center gap-3 flex-shrink-0 ml-2">
-            {!isStandalone && (
-              <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-2.5 flex-shrink-0 ml-2">
+            {/* Universal Search Icon */}
+            <button
+              onClick={onSearchClick}
+              className={`rounded-full flex items-center justify-center transition-all ${
+                isDark 
+                  ? 'hover:bg-white/15 text-text-muted hover:text-white' 
+                  : 'hover:bg-slate-100 text-slate-500 hover:text-slate-900'
+              } ${isScrolled ? 'w-7 h-7' : 'w-9 h-9'}`}
+              title="Search tasks..."
+            >
+              <FiSearch size={isScrolled ? 14 : 16} />
+            </button>
+
+            {!isStandalone && (deferredPrompt || isIOS) && (
+              <div className="flex items-center">
                 {/* Standard install prompt for Android/Desktop */}
                 {deferredPrompt && !isIOS && (
                   <button
                     onClick={onInstallClick}
-                    className="bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded-xl transition-all text-[11px] font-bold shadow-sm active:scale-95 border border-white/5"
+                    className={`px-2.5 py-1 rounded-lg transition-all text-[10px] font-bold shadow-sm active:scale-95 border ${
+                      isDark 
+                        ? 'bg-white/10 hover:bg-white/20 text-white border-white/5' 
+                        : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-200'
+                    }`}
                     title="Install Quadra App"
                   >
                     Install
@@ -68,19 +109,12 @@ export default function MobileShell({
                 {isIOS && (
                   <button
                     onClick={onInstallClick}
-                    className="bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded-xl transition-all text-[11px] font-bold shadow-sm active:scale-95 border border-white/5"
+                    className={`px-2.5 py-1 rounded-lg transition-all text-[10px] font-bold shadow-sm active:scale-95 border ${
+                      isDark 
+                        ? 'bg-white/10 hover:bg-white/20 text-white border-white/5' 
+                        : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-200'
+                    }`}
                     title="How to install on iPhone"
-                  >
-                    Install
-                  </button>
-                )}
-
-                {/* Fallback for Android when no prompt is available */}
-                {!deferredPrompt && !isIOS && (
-                  <button
-                    onClick={onMobileInstall}
-                    className="bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded-xl transition-all text-[11px] font-bold shadow-sm active:scale-95 border border-white/5"
-                    title="Try to install app"
                   >
                     Install
                   </button>
@@ -90,7 +124,11 @@ export default function MobileShell({
 
             {/* Streak count */}
             {streak > 0 && (
-              <div className="flex items-center gap-1 bg-amber-500/10 text-amber-400 px-3 py-1 rounded-full text-xs font-bold border border-amber-500/20 shadow-[0_0_12px_rgba(245,158,11,0.15)] animate-pulse select-none">
+              <div className={`flex items-center gap-0.5 rounded-full font-bold border shadow-xs animate-pulse select-none transition-all ${
+                isDark 
+                  ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' 
+                  : 'bg-amber-500/10 text-amber-600 border-amber-500/20'
+              } ${isScrolled ? 'px-2 py-0.5 text-[10px]' : 'px-3 py-1 text-xs'}`}>
                 <span>🔥</span>
                 <span>{streak}</span>
               </div>
@@ -100,10 +138,13 @@ export default function MobileShell({
             {user && (
               <button
                 onClick={() => onTabChange?.('profile')}
-                className={`w-9 h-9 rounded-full bg-gradient-to-tr from-cyan-500 via-blue-500 to-purple-600 text-white flex items-center justify-center font-extrabold text-sm shadow-[0_0_15px_rgba(99,102,241,0.25)] border-2 ${currentTab === 'profile'
+                className={`rounded-full bg-gradient-to-tr from-cyan-500 via-blue-500 to-purple-600 text-white flex items-center justify-center font-extrabold text-sm shadow-md border-2 ${
+                  currentTab === 'profile'
                     ? 'border-white ring-2 ring-purple-500/50 scale-95'
-                    : 'border-white/15 hover:border-white/40'
-                  } active:scale-90 hover:scale-105 transition-all duration-300`}
+                    : isDark 
+                      ? 'border-white/15 hover:border-white/40' 
+                      : 'border-slate-200 hover:border-slate-400'
+                } active:scale-90 hover:scale-105 transition-all duration-300 ${isScrolled ? 'w-7 h-7 text-xs' : 'w-9 h-9 text-sm'}`}
                 title="View Profile"
               >
                 {(user.name || 'U').charAt(0).toUpperCase()}
@@ -114,16 +155,16 @@ export default function MobileShell({
       </header>
 
       {/* Content */}
-      <main className="flex-1 mx-auto w-full max-w-3xl px-3 pb-28 pt-3">
+      <main className={`flex-1 mx-auto w-full max-w-3xl px-3 pb-32 transition-all duration-300 ${isScrolled ? 'pt-2' : 'pt-3'}`}>
         {children}
       </main>
 
-      {/* FAB */}
+      {/* FAB - raised padding to prevent overlap */}
       {showFab && (
         <button
           onClick={onFabClick}
           className="fixed right-5 z-30 rounded-full shadow-lg shadow-purple-500/20 bg-gradient-to-r from-blue-500 to-brand-primary text-white p-4 active:scale-95 hover:shadow-xl hover:shadow-purple-500/30 transition-all duration-200"
-          style={{ bottom: 'calc(env(safe-area-inset-bottom) + 92px)' }}
+          style={{ bottom: 'calc(env(safe-area-inset-bottom) + 98px)' }}
           aria-label="Add Task"
         >
           <FiPlus className="text-2xl" />

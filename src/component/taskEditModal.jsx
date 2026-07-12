@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { api } from "../services/api";
 import { motion, AnimatePresence } from "framer-motion";
-import { FiEdit2, FiFlag, FiClock, FiCheck, FiTarget, FiX } from "react-icons/fi";
+import { FiEdit2, FiFlag, FiClock, FiCheck, FiTarget, FiX, FiSettings } from "react-icons/fi";
 
 const priorityOptions = [
   { value: "High", label: "High Priority", icon: FiFlag, color: "from-rose-500 to-red-600", bgColor: "bg-rose-50 dark:bg-rose-950/20", textColor: "text-rose-700 dark:text-rose-400" },
@@ -18,6 +18,14 @@ export default function TaskEditModal({ task, quadrant, allTasks = {}, onSave, o
   const [estimated, setEstimated] = useState(task?.estimated ?? "");
   const [quadrantChoice, setQuadrantChoice] = useState(quadrant || "q2");
   const [dependencies, setDependencies] = useState(Array.isArray(task?.dependencies) ? task.dependencies.join(", ") : "");
+  
+  // Custom Coaching attributes
+  const [energyLevel, setEnergyLevel] = useState(task?.energyLevel || "Medium");
+  const [context, setContext] = useState(task?.context || "General");
+  const [projectName, setProjectName] = useState(task?.projectName || "Personal");
+  const aiConfidence = task?.aiConfidence || 90;
+
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
 
@@ -47,7 +55,7 @@ export default function TaskEditModal({ task, quadrant, allTasks = {}, onSave, o
     if (!title.trim()) return;
 
     setIsSubmitting(true);
-    await new Promise(r => setTimeout(r, 300));
+    await new Promise(r => setTimeout(r, 100));
 
     const updated = {
       ...task,
@@ -58,6 +66,10 @@ export default function TaskEditModal({ task, quadrant, allTasks = {}, onSave, o
       tags: tags.split(',').map(t => t.trim()).filter(Boolean),
       estimated: estimated ? Number(estimated) : undefined,
       dependencies: dependencies.split(',').map(t => t.trim()).filter(Boolean),
+      energyLevel,
+      context,
+      projectName,
+      aiConfidence,
       updatedAt: new Date(),
     };
 
@@ -109,124 +121,203 @@ export default function TaskEditModal({ task, quadrant, allTasks = {}, onSave, o
             <p className="text-text-muted text-xs">Update task details and quadrant</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-4">
             {/* Title */}
             <div>
-              <label className="block text-xs font-semibold text-text-muted mb-2">Title</label>
-              <motion.input
+              <label className="block text-xs font-semibold text-text-muted mb-1.5">Title</label>
+              <input
                 type="text"
-                className="w-full p-3 rounded-2xl border border-border-subtle bg-background-elevated text-text-primary placeholder:text-text-muted/50 focus:border-brand-primary focus:ring-1 focus:ring-brand-primary outline-none transition-all duration-300 text-base font-medium"
+                className="w-full p-2.5 rounded-xl border border-border-subtle bg-background-elevated text-text-primary placeholder:text-text-muted/50 focus:border-brand-primary outline-none text-sm font-medium"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 autoFocus
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
+                required
               />
             </div>
 
             {/* Description */}
             <div>
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center justify-between mb-1.5">
                 <label className="block text-xs font-semibold text-text-muted">Description</label>
                 <button
                   type="button"
                   onClick={handleGenerateAI}
                   disabled={!title.trim() || isGeneratingAI}
-                  className="text-xs font-bold text-brand-primary hover:text-purple-400 disabled:opacity-40 transition-colors flex items-center gap-1 active:scale-95"
+                  className="text-[10px] font-extrabold text-brand-primary hover:text-purple-400 disabled:opacity-40 transition-colors flex items-center gap-0.5"
                 >
                   {isGeneratingAI ? "⚡ Analyzing..." : "⚡ AI Checklist"}
                 </button>
               </div>
               <textarea
-                className="w-full p-3 rounded-2xl border border-border-subtle bg-background-elevated text-text-primary placeholder:text-text-muted/50 focus:border-brand-primary focus:ring-1 focus:ring-brand-primary outline-none transition-all duration-300 text-base min-h-[90px] font-medium"
+                className="w-full p-2.5 rounded-xl border border-border-subtle bg-background-elevated text-text-primary placeholder:text-text-muted/50 focus:border-brand-primary outline-none text-xs min-h-[70px] font-medium"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
               />
             </div>
 
-            {/* Priority */}
-            <div>
-              <label className="block text-xs font-semibold text-text-muted mb-3">Priority</label>
-              <div className="grid grid-cols-3 gap-2.5">
-                {priorityOptions.map((option, index) => {
-                  const Icon = option.icon;
-                  const isSelected = priority === option.value;
-                  return (
-                    <motion.button
-                      key={option.value}
-                      type="button"
-                      onClick={() => setPriority(option.value)}
-                      className={`p-3 rounded-2xl border transition-all duration-300 flex flex-col justify-center items-center ${
-                        isSelected 
-                          ? `border-brand-primary bg-gradient-to-r ${option.color} text-white shadow-md shadow-purple-500/15` 
-                          : `border-border-subtle ${option.bgColor} hover:border-brand-primary/40`
-                      }`}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.2 + index * 0.05 }}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      <Icon className={`text-lg mx-auto mb-1.5 ${isSelected ? 'text-white' : option.textColor}`} />
-                      <div className={`text-[11px] font-bold leading-tight ${isSelected ? 'text-white' : option.textColor}`}>
-                        {option.label.split(' ')[0]}
-                      </div>
-                    </motion.button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Due / Estimated */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            {/* Priority & Quadrant */}
+            <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="block text-xs font-semibold text-text-muted mb-2">Due Date</label>
-                <input type="date" className="w-full p-2.5 rounded-2xl border border-border-subtle bg-background-elevated text-text-primary focus:border-brand-primary focus:ring-1 focus:ring-brand-primary outline-none transition-all duration-300 text-base" value={due} onChange={(e) => setDue(e.target.value)} />
+                <label className="block text-[10px] font-semibold text-text-muted mb-1">Priority</label>
+                <select
+                  className="w-full p-2 rounded-xl border border-border-subtle bg-background-elevated text-text-primary outline-none text-xs font-bold"
+                  value={priority}
+                  onChange={(e) => setPriority(e.target.value)}
+                >
+                  {priorityOptions.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label.split(' ')[0]}</option>
+                  ))}
+                </select>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-text-muted mb-2">Estimated (min)</label>
-                <input type="number" min="0" className="w-full p-2.5 rounded-2xl border border-border-subtle bg-background-elevated text-text-primary placeholder:text-text-muted/50 focus:border-brand-primary focus:ring-1 focus:ring-brand-primary outline-none transition-all duration-300 text-base" value={estimated} onChange={(e) => setEstimated(e.target.value)} />
+                <label className="block text-[10px] font-semibold text-text-muted mb-1">Quadrant Choice</label>
+                <select
+                  className="w-full p-2 rounded-xl border border-border-subtle bg-background-elevated text-text-primary outline-none text-xs font-bold"
+                  value={quadrantChoice}
+                  onChange={(e) => setQuadrantChoice(e.target.value)}
+                >
+                  <option value="q1">Q1 - Important & Urgent</option>
+                  <option value="q2">Q2 - Important & Not Urgent</option>
+                  <option value="q3">Q3 - Not Important & Urgent</option>
+                  <option value="q4">Q4 - Not Important & Not Urgent</option>
+                </select>
               </div>
             </div>
 
-            {/* Tags */}
-            <div>
-              <label className="block text-xs font-semibold text-text-muted mb-2">Tags (comma-separated)</label>
-              <input type="text" className="w-full p-2.5 rounded-2xl border border-border-subtle bg-background-elevated text-text-primary placeholder:text-text-muted/50 focus:border-brand-primary focus:ring-1 focus:ring-brand-primary outline-none transition-all duration-300 text-base" value={tags} onChange={(e) => setTags(e.target.value)} placeholder="e.g. frontend, api, research" />
+            {/* Due Date & Project category */}
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-xs font-semibold text-text-muted mb-1">Due Date</label>
+                <input 
+                  type="date" 
+                  className="w-full p-2 rounded-xl border border-border-subtle bg-background-elevated text-text-primary focus:border-brand-primary outline-none text-xs font-bold" 
+                  value={due} 
+                  onChange={(e) => setDue(e.target.value)} 
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-text-muted mb-1">Project Group</label>
+                <select
+                  className="w-full p-2 rounded-xl border border-border-subtle bg-background-elevated text-text-primary focus:border-brand-primary outline-none text-xs font-bold"
+                  value={projectName}
+                  onChange={(e) => setProjectName(e.target.value)}
+                >
+                  <option value="Personal">📁 Personal</option>
+                  <option value="Career">💼 Career</option>
+                  <option value="Learning">🎓 Learning</option>
+                  <option value="Health">🏃 Health</option>
+                  <option value="Finance">💰 Finance</option>
+                  <option value="General">📦 General</option>
+                </select>
+              </div>
             </div>
 
-            {/* Quadrant */}
-            <div>
-              <label className="block text-xs font-semibold text-text-muted mb-2">Quadrant</label>
-              <select className="w-full p-2.5 rounded-2xl border border-border-subtle bg-background-elevated text-text-primary focus:border-brand-primary focus:ring-1 focus:ring-brand-primary outline-none transition-all duration-300 text-base" value={quadrantChoice} onChange={(e) => setQuadrantChoice(e.target.value)}>
-                <option value="q1">Q1 - Important & Urgent</option>
-                <option value="q2">Q2 - Important & Not Urgent</option>
-                <option value="q3">Q3 - Not Important & Urgent</option>
-                <option value="q4">Q4 - Not Important & Not Urgent</option>
-              </select>
-            </div>
+            {/* Advanced toggle */}
+            <button
+              type="button"
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              className="w-full text-center text-xs font-bold text-brand-primary hover:underline py-1 flex items-center justify-center gap-1"
+            >
+              <FiSettings size={12} />
+              <span>{showAdvanced ? "Hide Advanced Options" : "Show Advanced Options"}</span>
+            </button>
 
-            {/* Dependencies */}
-            <div>
-              <label className="block text-xs font-semibold text-text-muted mb-2">Dependencies</label>
-              <input type="text" list="edit-task-titles" placeholder="Start typing and separate by commas" className="w-full p-2.5 rounded-2xl border border-border-subtle bg-background-elevated text-text-primary placeholder:text-text-muted/50 focus:border-brand-primary focus:ring-1 focus:ring-brand-primary outline-none transition-all duration-300 text-base" value={dependencies} onChange={(e) => setDependencies(e.target.value)} />
-              <datalist id="edit-task-titles">
-                {taskTitles.map((title) => (
-                  <option key={title} value={title} />
-                ))}
-              </datalist>
-            </div>
+            <AnimatePresence>
+              {showAdvanced && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-hidden space-y-4 pt-1"
+                >
+                  <div className="grid grid-cols-3 gap-2">
+                    <div>
+                      <label className="block text-[10px] text-text-muted mb-1">Estimate (min)</label>
+                      <input 
+                        type="number" 
+                        min="0" 
+                        className="w-full p-2 rounded-xl border border-border-subtle bg-background-elevated text-text-primary outline-none text-xs" 
+                        value={estimated} 
+                        onChange={(e) => setEstimated(e.target.value)} 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] text-text-muted mb-1">Energy Req.</label>
+                      <select
+                        className="w-full p-2 rounded-xl border border-border-subtle bg-background-elevated text-text-primary outline-none text-xs font-bold"
+                        value={energyLevel}
+                        onChange={(e) => setEnergyLevel(e.target.value)}
+                      >
+                        <option value="High">High ⚡</option>
+                        <option value="Medium">Medium 🔋</option>
+                        <option value="Low">Low 💤</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] text-text-muted mb-1">Context</label>
+                      <select
+                        className="w-full p-2 rounded-xl border border-border-subtle bg-background-elevated text-text-primary outline-none text-xs font-bold"
+                        value={context}
+                        onChange={(e) => setContext(e.target.value)}
+                      >
+                        <option value="General">General 📦</option>
+                        <option value="Home">Home 🏠</option>
+                        <option value="Office">Office 💼</option>
+                        <option value="Laptop">Laptop 💻</option>
+                        <option value="Phone">Phone 📞</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-text-muted mb-1">Tags (comma-separated)</label>
+                    <input 
+                      type="text" 
+                      className="w-full p-2 rounded-xl border border-border-subtle bg-background-elevated text-text-primary placeholder:text-text-muted/50 focus:border-brand-primary outline-none text-xs" 
+                      value={tags} 
+                      onChange={(e) => setTags(e.target.value)} 
+                      placeholder="e.g. frontend, api, research" 
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-text-muted mb-1">Dependencies</label>
+                    <input 
+                      type="text" 
+                      list="edit-task-titles" 
+                      placeholder="e.g. Task Title" 
+                      className="w-full p-2 rounded-xl border border-border-subtle bg-background-elevated text-text-primary placeholder:text-text-muted/50 focus:border-brand-primary outline-none text-xs" 
+                      value={dependencies} 
+                      onChange={(e) => setDependencies(e.target.value)} 
+                    />
+                    <datalist id="edit-task-titles">
+                      {taskTitles.map((title) => (
+                        <option key={title} value={title} />
+                      ))}
+                    </datalist>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Actions */}
-            <motion.div className="flex gap-3 pt-3" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-              <motion.button type="button" onClick={onClose} className="flex-1 px-5 py-3 rounded-2xl border border-border-subtle text-text-muted font-bold hover:bg-background-elevated hover:text-text-primary transition-all duration-300" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+            <div className="flex gap-3 pt-2">
+              <button 
+                type="button" 
+                onClick={onClose} 
+                className="flex-1 py-2.5 rounded-2xl border border-border-subtle text-text-muted font-bold hover:bg-background-elevated hover:text-text-primary text-xs"
+              >
                 Cancel
-              </motion.button>
-              <motion.button type="submit" disabled={!title.trim() || isSubmitting} className="flex-1 px-5 py-3 rounded-2xl bg-gradient-to-r from-blue-500 to-brand-primary text-white font-bold shadow-md shadow-purple-500/20 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 flex items-center justify-center gap-2" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                <FiTarget className="text-lg" />
-                {isSubmitting ? 'Saving...' : 'Save Changes'}
-              </motion.button>
-            </motion.div>
+              </button>
+              <button 
+                type="submit" 
+                disabled={!title.trim() || isSubmitting} 
+                className="flex-1 py-2.5 rounded-2xl bg-gradient-to-r from-blue-500 to-brand-primary text-white font-bold disabled:opacity-50 text-xs flex items-center justify-center gap-1.5"
+              >
+                <FiTarget className="text-sm" />
+                <span>{isSubmitting ? 'Saving...' : 'Save Changes'}</span>
+              </button>
+            </div>
           </form>
 
           {/* Decorative */}

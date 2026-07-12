@@ -35,12 +35,7 @@ const quadrantColors = {
   q4: "border-l-emerald-500 dark:border-l-green-500",
 };
 
-const quadrantLabels = {
-  q1: "Q1 • Do First",
-  q2: "Q2 • Schedule",
-  q3: "Q3 • Delegate",
-  q4: "Q4 • Eliminate",
-};
+
 
 const quadrantEmojis = {
   q1: "🔥",
@@ -87,7 +82,7 @@ export default function TaskCard({ task, index, quadrant, onEdit, onDelete, onCo
   }, [showMenu, showQuadrantMenu]);
 
   const isDueToday = task.due && new Date(task.due).toDateString() === new Date().toDateString();
-  const priority = priorityConfig[task.priority] || priorityConfig.Medium;
+
 
   const relativeDueLabel = (() => {
     if (!task.due) return null;
@@ -247,19 +242,46 @@ export default function TaskCard({ task, index, quadrant, onEdit, onDelete, onCo
                     </h3>
 
                     {/* Subtitle details */}
-                    <div className="flex items-center flex-wrap gap-x-2 gap-y-0.5 text-[10px] sm:text-xs font-semibold text-text-muted mt-1">
-                      <span className={isDark ? 'text-slate-400' : priority.textColor}>
-                        {quadrantLabels[quadrant]}
-                      </span>
-                      <span>•</span>
-                      <span>{priority.label}</span>
+                    <div className="flex items-center flex-wrap gap-1.5 text-[9px] font-bold text-text-muted mt-1.5">
+                      {task.projectName && (
+                        <span className="px-1.5 py-0.2 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                          📁 {task.projectName}
+                        </span>
+                      )}
+                      {task.estimated && (
+                        <span className="flex items-center gap-0.5">
+                          <FiClock size={10} />
+                          {task.estimated}m
+                        </span>
+                      )}
+                      {task.energyLevel && (
+                        <span>⚡ {task.energyLevel}</span>
+                      )}
+                      {task.context && (
+                        <span>🏠 {task.context}</span>
+                      )}
+                      {task.aiConfidence && (
+                        <span className="text-purple-400">AI {task.aiConfidence}%</span>
+                      )}
                       {task.recurringEnabled && (
-                        <>
-                          <span>•</span>
-                          <span className="text-purple-500 font-bold flex items-center gap-0.5">🔁 {task.recurringPattern}</span>
-                        </>
+                        <span className="text-purple-500 flex items-center gap-0.5">🔁 {task.recurringPattern}</span>
                       )}
                     </div>
+
+                    {task.postponedCount > 2 && (
+                      <div className="mt-1.5 p-1 px-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[9px] font-bold text-amber-500 flex items-center justify-between no-expand">
+                        <span>💡 Postponed {task.postponedCount} times</span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onStartFocus && onStartFocus(task);
+                          }}
+                          className="px-1.5 py-0.5 rounded-lg bg-amber-500 text-slate-950 font-extrabold active:scale-95"
+                        >
+                          Do Now
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
 
