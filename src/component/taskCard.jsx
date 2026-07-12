@@ -1,32 +1,10 @@
 import React, { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Draggable } from "@hello-pangea/dnd";
-import { FiClock, FiFlag, FiCheck, FiMoreVertical, FiEdit2, FiTrash2, FiCheckCircle, FiPlay, FiTag } from "react-icons/fi";
+import { FiClock, FiMoreVertical, FiEdit2, FiTrash2, FiCheckCircle, FiPlay, FiTag } from "react-icons/fi";
 import { motion, AnimatePresence } from "framer-motion";
 
-const priorityConfig = {
-  High: {
-    color: "from-rose-500 to-red-600",
-    bgColor: "bg-rose-50 dark:bg-rose-950/20",
-    textColor: "text-rose-700 dark:text-rose-400",
-    icon: FiFlag,
-    label: "High Priority"
-  },
-  Medium: {
-    color: "from-amber-500 to-orange-600",
-    bgColor: "bg-amber-50 dark:bg-amber-950/20",
-    textColor: "text-amber-700 dark:text-amber-400",
-    icon: FiClock,
-    label: "Medium Priority"
-  },
-  Low: {
-    color: "from-emerald-500 to-green-600",
-    bgColor: "bg-emerald-50 dark:bg-emerald-950/20",
-    textColor: "text-emerald-700 dark:text-emerald-400",
-    icon: FiCheck,
-    label: "Low Priority"
-  },
-};
+
 
 const quadrantColors = {
   q1: "border-l-rose-500 dark:border-l-red-500",

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { api } from "../services/api";
 import { motion, AnimatePresence } from "framer-motion";
-import { FiFlag, FiClock, FiCheck, FiX, FiZap, FiHelpCircle, FiRepeat, FiSettings } from "react-icons/fi";
+import { FiCheck, FiX, FiZap, FiHelpCircle, FiRepeat, FiSettings } from "react-icons/fi";
 
 
 
