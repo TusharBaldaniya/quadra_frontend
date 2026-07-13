@@ -25,7 +25,7 @@ export default function MobileShell({
 
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 30);
+      setIsScrolled(window.scrollY > 15);
     };
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
@@ -37,17 +37,17 @@ export default function MobileShell({
       <div 
         className={`fixed top-0 left-0 right-0 z-30 pointer-events-none backdrop-blur-md border-b transition-colors duration-200`} 
         style={{ 
-          height: isScrolled ? 'calc(env(safe-area-inset-top) + 2px)' : 'calc(env(safe-area-inset-top) + 8px)',
+          height: 'calc(env(safe-area-inset-top) + 8px)',
           backgroundColor: isDark 
-            ? (isScrolled ? 'rgba(12, 14, 18, 0.92)' : 'rgba(12, 14, 18, 0.4)') 
-            : (isScrolled ? 'rgba(248, 250, 252, 0.92)' : 'rgba(248, 250, 252, 0.4)'),
+            ? (isScrolled ? 'rgba(12, 14, 18, 0.95)' : 'rgba(12, 14, 18, 0.4)') 
+            : (isScrolled ? 'rgba(248, 250, 252, 0.95)' : 'rgba(248, 250, 252, 0.4)'),
           borderColor: isDark ? 'rgba(255, 255, 255, 0.02)' : 'rgba(0, 0, 0, 0.02)'
         }} 
       />
 
-      {/* Top bar */}
-      <header className={`sticky top-0 z-20 w-full transition-all duration-300 ${isScrolled ? 'px-1 pt-1' : 'px-3 pt-3'}`} style={{ paddingTop: isScrolled ? 'env(safe-area-inset-top)' : 'calc(env(safe-area-inset-top) + 8px)' }}>
-        <div className={`mx-auto max-w-3xl w-full flex items-center justify-between border shadow-xl backdrop-blur-2xl transition-all duration-300 ${
+      {/* Top bar (Constant size, only background adapts on scroll) */}
+      <header className="sticky top-0 z-20 w-full px-3 pt-3" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 8px)' }}>
+        <div className={`mx-auto max-w-3xl w-full flex items-center justify-between border shadow-xl backdrop-blur-2xl transition-all duration-300 px-4 py-2.5 rounded-3xl ${
           isDark 
             ? isScrolled 
               ? 'border-white/[0.08] bg-slate-900/95 shadow-black/45' 
@@ -55,13 +55,13 @@ export default function MobileShell({
             : isScrolled
               ? 'border-slate-200 bg-white/95 shadow-slate-200/50'
               : 'border-slate-200/40 bg-white/40 shadow-slate-100/10'
-        } ${isScrolled ? 'px-4 py-1.5 rounded-2xl' : 'px-4 py-2.5 rounded-3xl'}`}>
+        }`}>
           
           <div className="flex items-center gap-2.5 min-w-0">
             {/* Logo in a gradient glass circle */}
-            <div className={`relative flex-shrink-0 rounded-xl bg-gradient-to-tr from-blue-500/15 to-purple-500/15 p-1 border flex items-center justify-center shadow-inner transition-all duration-300 ${
+            <div className={`relative flex-shrink-0 w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-500/15 to-purple-500/15 p-1 border flex items-center justify-center shadow-inner transition-all duration-300 ${
               isDark ? 'border-white/10' : 'border-slate-200/50'
-            } ${isScrolled ? 'w-7 h-7' : 'w-9 h-9'}`}>
+            }`}>
               <img
                 src="/quadra-symbol-transparent.png"
                 alt="Logo"
@@ -70,12 +70,12 @@ export default function MobileShell({
             </div>
 
             <div className="min-w-0">
-              <h1 className={`font-extrabold font-display bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-transparent truncate tracking-tight transition-all duration-300 ${isScrolled ? 'text-sm' : 'text-base'}`}>
+              <h1 className="font-extrabold font-display bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-transparent truncate tracking-tight text-base">
                 {title}
               </h1>
-              {subtitle && !isScrolled ? (
+              {subtitle && (
                 <p className="text-[10px] text-text-muted/80 truncate font-semibold uppercase tracking-wider leading-none mt-0.5">{subtitle}</p>
-              ) : null}
+              )}
             </div>
           </div>
 
@@ -84,14 +84,14 @@ export default function MobileShell({
             {/* Universal Search Icon */}
             <button
               onClick={onSearchClick}
-              className={`rounded-full flex items-center justify-center transition-all ${
+              className={`rounded-full flex items-center justify-center transition-all w-9 h-9 ${
                 isDark 
                   ? 'hover:bg-white/15 text-text-muted hover:text-white' 
                   : 'hover:bg-slate-100 text-slate-500 hover:text-slate-900'
-              } ${isScrolled ? 'w-7 h-7' : 'w-9 h-9'}`}
+              }`}
               title="Search tasks..."
             >
-              <FiSearch size={isScrolled ? 14 : 16} />
+              <FiSearch size={16} />
             </button>
 
             {!isStandalone && (deferredPrompt || isIOS) && (
@@ -130,11 +130,11 @@ export default function MobileShell({
 
             {/* Streak count */}
             {streak > 0 && (
-              <div className={`flex items-center gap-0.5 rounded-full font-bold border shadow-xs animate-pulse select-none transition-all ${
+              <div className={`flex items-center gap-0.5 rounded-full font-bold border shadow-xs animate-pulse select-none transition-all px-3 py-1 text-xs ${
                 isDark 
                   ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' 
                   : 'bg-amber-500/10 text-amber-600 border-amber-500/20'
-              } ${isScrolled ? 'px-2 py-0.5 text-[10px]' : 'px-3 py-1 text-xs'}`}>
+              }`}>
                 <span>🔥</span>
                 <span>{streak}</span>
               </div>
@@ -144,13 +144,13 @@ export default function MobileShell({
             {user && (
               <button
                 onClick={() => onTabChange?.('profile')}
-                className={`rounded-full bg-gradient-to-tr from-cyan-500 via-blue-500 to-purple-600 text-white flex items-center justify-center font-extrabold text-sm shadow-md border-2 ${
+                className={`rounded-full bg-gradient-to-tr from-cyan-500 via-blue-500 to-purple-600 text-white flex items-center justify-center font-extrabold shadow-md border-2 w-9 h-9 text-sm ${
                   currentTab === 'profile'
                     ? 'border-white ring-2 ring-purple-500/50 scale-95'
                     : isDark 
                       ? 'border-white/15 hover:border-white/40' 
                       : 'border-slate-200 hover:border-slate-400'
-                } active:scale-90 hover:scale-105 transition-all duration-300 ${isScrolled ? 'w-7 h-7 text-xs' : 'w-9 h-9 text-sm'}`}
+                } active:scale-90 hover:scale-105 transition-all duration-300`}
                 title="View Profile"
               >
                 {(user.name || 'U').charAt(0).toUpperCase()}
@@ -161,7 +161,7 @@ export default function MobileShell({
       </header>
 
       {/* Content */}
-      <main className={`flex-1 mx-auto w-full max-w-3xl px-3 pb-32 transition-all duration-300 ${isScrolled ? 'pt-2' : 'pt-3'}`}>
+      <main className="flex-1 mx-auto w-full max-w-3xl px-3 pb-32 pt-3 transition-all duration-300">
         {children}
       </main>
 

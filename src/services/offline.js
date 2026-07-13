@@ -71,12 +71,62 @@ export async function flushQueue(api) {
     const list = JSON.parse(localStorage.getItem(LS_QUEUE) || '[]');
     if (!list.length) return;
     const remaining = [];
+    const idMap = {}; // mapping tmpId to real database ID
+
     for (const m of list) {
       try {
-        if (m.type === 'create') await api.createTask(m.data);
-        else if (m.type === 'update') await api.updateTask(m.id, m.data);
-        else if (m.type === 'complete') await api.completeTask(m.id);
-        else if (m.type === 'delete') await api.deleteTask(m.id);
+        if (m.type === 'create') {
+          const res = await api.createTask(m.data);
+          if (res && res.id && m.tmpId) {
+            idMap[m.tmpId] = res.id;
+          }
+        }
+        else if (m.type === 'update') {
+          const targetId = idMap[m.id] || m.id;
+          if (typeof targetId === 'string' && targetId.startsWith('tmp-task-')) {
+            remaining.push(m);
+          } else {
+            await api.updateTask(targetId, m.data);
+          }
+        }
+        else if (m.type === 'complete') {
+          const targetId = idMap[m.id] || m.id;
+          if (typeof targetId === 'string' && targetId.startsWith('tmp-task-')) {
+            remaining.push(m);
+          } else {
+            await api.completeTask(targetId);
+          }
+        }
+        else if (m.type === 'delete') {
+          const targetId = idMap[m.id] || m.id;
+          if (typeof targetId === 'string' && targetId.startsWith('tmp-task-')) {
+            // Created and deleted offline - no action required
+          } else {
+            await api.deleteTask(targetId);
+          }
+        }
+        else if (m.type === 'create-habit') {
+          const res = await api.createHabit(m.title);
+          if (res && res.id && m.tmpId) {
+            idMap[m.tmpId] = res.id;
+          }
+        }
+        else if (m.type === 'toggle-habit') {
+          const targetId = idMap[m.id] || m.id;
+          if (typeof targetId === 'string' && targetId.startsWith('tmp-habit-')) {
+            remaining.push(m);
+          } else {
+            await api.toggleHabit(targetId, m.date);
+          }
+        }
+        else if (m.type === 'delete-habit') {
+          const targetId = idMap[m.id] || m.id;
+          if (typeof targetId === 'string' && targetId.startsWith('tmp-habit-')) {
+            // Created and deleted offline - no action required
+          } else {
+            await api.deleteHabit(targetId);
+          }
+        }
       } catch {
         remaining.push(m);
       }

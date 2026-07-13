@@ -402,8 +402,15 @@ export default function App() {
       try {
         const data = await api.getHabits();
         setHabits(data || []);
+        localStorage.setItem('quadra_cache_habits', JSON.stringify(data || []));
       } catch (err) {
         console.error("Failed to load habits:", err);
+        const cached = localStorage.getItem('quadra_cache_habits');
+        if (cached) {
+          try {
+            setHabits(JSON.parse(cached));
+          } catch {}
+        }
       }
     };
 
@@ -415,32 +422,71 @@ export default function App() {
   const handleCreateHabit = async (title) => {
     try {
       const newHabit = await api.createHabit(title);
-      setHabits(prev => [...prev, newHabit]);
+      setHabits(prev => {
+        const next = [...prev, newHabit];
+        localStorage.setItem('quadra_cache_habits', JSON.stringify(next));
+        return next;
+      });
       addAlert("🌱 Habit added!", "success");
     } catch (err) {
-      addAlert(`❌ Failed to create habit: ${err.message}`, "error");
+      const tmpId = `tmp-habit-${Date.now()}`;
+      const newHabit = { id: tmpId, title, streak: 0, completedToday: false, history: [] };
+      setHabits(prev => {
+        const next = [...prev, newHabit];
+        localStorage.setItem('quadra_cache_habits', JSON.stringify(next));
+        return next;
+      });
+      enqueueMutation({ type: 'create-habit', title, tmpId });
+      addAlert("🌱 Saved locally — will sync habit when online", "success");
     }
   };
 
   const handleToggleHabit = async (id, date) => {
     try {
       const updated = await api.toggleHabit(id, date);
-      setHabits(prev => prev.map(h => h.id === id ? { ...h, completedToday: updated.completedToday, streak: updated.streak } : h));
+      setHabits(prev => {
+        const next = prev.map(h => h.id === id ? { ...h, completedToday: updated.completedToday, streak: updated.streak } : h);
+        localStorage.setItem('quadra_cache_habits', JSON.stringify(next));
+        return next;
+      });
       if (updated.completedToday) {
         addAlert("✨ Habit completed today! Keep it up!", "success");
       }
     } catch (err) {
-      addAlert(`❌ Failed to update habit: ${err.message}`, "error");
+      setHabits(prev => {
+        const next = prev.map(h => {
+          if (h.id === id) {
+            const nextCompleted = !h.completedToday;
+            const nextStreak = nextCompleted ? h.streak + 1 : Math.max(0, h.streak - 1);
+            return { ...h, completedToday: nextCompleted, streak: nextStreak };
+          }
+          return h;
+        });
+        localStorage.setItem('quadra_cache_habits', JSON.stringify(next));
+        return next;
+      });
+      enqueueMutation({ type: 'toggle-habit', id, date });
+      addAlert("✨ Toggled locally — will sync when online", "success");
     }
   };
 
   const handleDeleteHabit = async (id) => {
     try {
       await api.deleteHabit(id);
-      setHabits(prev => prev.filter(h => h.id !== id));
+      setHabits(prev => {
+        const next = prev.filter(h => h.id !== id);
+        localStorage.setItem('quadra_cache_habits', JSON.stringify(next));
+        return next;
+      });
       addAlert("🗑️ Habit deleted", "success");
     } catch (err) {
-      addAlert(`❌ Failed to delete habit: ${err.message}`, "error");
+      setHabits(prev => {
+        const next = prev.filter(h => h.id !== id);
+        localStorage.setItem('quadra_cache_habits', JSON.stringify(next));
+        return next;
+      });
+      enqueueMutation({ type: 'delete-habit', id });
+      addAlert("🗑️ Deleted locally — will sync when online", "success");
     }
   };
 
