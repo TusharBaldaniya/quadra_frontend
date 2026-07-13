@@ -56,7 +56,7 @@ export default function App() {
     localStorage.setItem('custom-theme-override', themeName);
   };
 
-  // Validate session on mount
+  // Validate session on mount (Offline-friendly)
   useEffect(() => {
     (async () => {
       const token = localStorage.getItem('quadra_auth_token');
@@ -68,9 +68,24 @@ export default function App() {
       try {
         const data = await api.getMe();
         setUser(data.user);
+        localStorage.setItem('quadra_cached_user', JSON.stringify(data.user));
       } catch (err) {
-        localStorage.removeItem('quadra_auth_token');
-        setUser(null);
+        const isOffline = !navigator.onLine || err.message === 'Failed to fetch' || err.message.includes('NetworkError');
+        if (isOffline) {
+          const cached = localStorage.getItem('quadra_cached_user');
+          if (cached) {
+            try {
+              setUser(JSON.parse(cached));
+            } catch {
+              setUser({ name: "Offline User", email: "" });
+            }
+          } else {
+            setUser({ name: "Offline User", email: "" });
+          }
+        } else {
+          localStorage.removeItem('quadra_auth_token');
+          setUser(null);
+        }
       } finally {
         setAuthLoading(false);
       }
@@ -82,6 +97,10 @@ export default function App() {
   const [isStandalone, setIsStandalone] = useState(false);
   const [showInstallInstructions, setShowInstallInstructions] = useState(false);
   const [alerts, setAlerts] = useState([]);
+  
+  // Biometrics Lock States
+  const [biometricsEnabled, setBiometricsEnabled] = useState(() => localStorage.getItem('quadra_biometrics_setup') === 'true');
+  const [showBiometricLock, setShowBiometricLock] = useState(() => localStorage.getItem('quadra_biometrics_setup') === 'true' && localStorage.getItem('quadra_auth_token') !== null);
 
   // Core app state (declared early so effects can reference them)
   const [tasks, setTasks] = useState({ q1: [], q2: [], q3: [], q4: [] });
@@ -584,6 +603,81 @@ export default function App() {
     } catch (err) {
       console.error("Error during installation prompt:", err);
     }
+  };
+
+  const handleToggleBiometrics = async () => {
+    if (biometricsEnabled) {
+      localStorage.removeItem('quadra_biometrics_setup');
+      setBiometricsEnabled(false);
+      addAlert("🔒 Biometric login disabled.", "info");
+    } else {
+      try {
+        if (!window.PublicKeyCredential) {
+          throw new Error("Biometric authentication (Touch ID / Face ID) is not supported by your browser or device.");
+        }
+        
+        const challenge = new Uint8Array(16);
+        window.crypto.getRandomValues(challenge);
+        const userId = new Uint8Array(16);
+        window.crypto.getRandomValues(userId);
+
+        const publicKey = {
+          challenge,
+          rp: { name: "Quadra Coach" },
+          user: {
+            id: userId,
+            name: (user && user.name) || "user",
+            displayName: (user && user.name) || "User",
+          },
+          pubKeyCredParams: [{ type: "public-key", alg: -7 }],
+          authenticatorSelection: {
+            authenticatorAttachment: "platform",
+            userVerification: "required",
+          },
+          timeout: 60000,
+        };
+
+        addAlert("☝️ Touch your sensor or scan your face to link biometric lock...", "info");
+        await navigator.credentials.create({ publicKey });
+        
+        localStorage.setItem('quadra_biometrics_setup', 'true');
+        setBiometricsEnabled(true);
+        addAlert("🚀 Touch ID / Face ID login enabled successfully!", "success");
+      } catch (err) {
+        addAlert(`❌ Failed to enable biometrics: ${err.message}`, "error");
+      }
+    }
+  };
+
+  const handleUnlockWithBiometrics = async () => {
+    try {
+      if (!window.PublicKeyCredential) {
+        throw new Error("Biometrics not supported on this device.");
+      }
+      const challenge = new Uint8Array(16);
+      window.crypto.getRandomValues(challenge);
+
+      const publicKey = {
+        challenge,
+        timeout: 60000,
+        userVerification: "required",
+      };
+
+      addAlert("🔑 Scan your face or fingerprint to unlock...", "info");
+      await navigator.credentials.get({ publicKey });
+      setShowBiometricLock(false);
+      addAlert("🔓 App unlocked successfully!", "success");
+    } catch (err) {
+      addAlert(`❌ Biometrics authentication failed: ${err.message}`, "error");
+    }
+  };
+
+  const handleLockSignOut = () => {
+    localStorage.removeItem('quadra_auth_token');
+    localStorage.removeItem('quadra_biometrics_setup');
+    setBiometricsEnabled(false);
+    setShowBiometricLock(false);
+    setUser(null);
   };
 
   const handleMobileInstallFallback = () => {
@@ -1487,6 +1581,28 @@ export default function App() {
               </div>
             </div>
 
+            {/* Security Settings (Biometric Lock) */}
+            <div className="p-4 rounded-2xl border border-border-subtle bg-background-surface shadow-sm transition-colors space-y-3">
+              <h3 className="font-semibold text-sm">🛡️ Security</h3>
+              <div className="flex items-center justify-between py-1">
+                <div>
+                  <span className="text-xs text-text-primary font-bold block">Biometric Lock Screen</span>
+                  <span className="text-[10px] text-text-muted block mt-0.5">Use Touch ID / Face ID platform biometrics to lock startup</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleToggleBiometrics}
+                  className={`px-4 py-1.5 rounded-full text-xs font-bold border transition-all duration-200 ${
+                    biometricsEnabled
+                      ? 'bg-brand-primary border-brand-primary text-white shadow-sm'
+                      : 'border-border-subtle bg-background-elevated/40 text-text-muted hover:bg-background-elevated hover:text-text-primary'
+                  }`}
+                >
+                  {biometricsEnabled ? 'Enabled' : 'Enable'}
+                </button>
+              </div>
+            </div>
+
             {/* Weekly goal settings */}
             <div className="p-4 rounded-2xl border border-border-subtle bg-background-surface shadow-sm transition-colors">
               <h3 className="font-semibold text-sm mb-2.5">Weekly Goal</h3>
@@ -1694,6 +1810,42 @@ export default function App() {
           onStartFocus={(task) => setFocusTask(task)}
           theme={theme}
         />
+      )}
+
+      {/* Biometrics Lock Screen Overlay */}
+      {showBiometricLock && (
+        <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-3xl z-50 flex flex-col items-center justify-center p-6 text-center text-slate-100">
+          <div className="max-w-md w-full p-8 rounded-3xl border border-white/[0.08] bg-slate-900/60 shadow-2xl flex flex-col items-center gap-6">
+            <div className="relative w-20 h-20 rounded-full bg-brand-primary/10 flex items-center justify-center border border-brand-primary/20 animate-pulse">
+              <span className="text-4xl">🧬</span>
+              <span className="absolute inset-0 rounded-full border border-brand-primary/40 animate-ping opacity-50" />
+            </div>
+
+            <div>
+              <h2 className="text-2xl font-extrabold bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-transparent font-display">
+                Quadra Lock
+              </h2>
+              <p className="text-xs text-slate-400 mt-1 font-semibold">
+                Verify Touch ID / Face ID to unlock your coach
+              </p>
+            </div>
+
+            <button
+              onClick={handleUnlockWithBiometrics}
+              className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-blue-500 to-brand-primary text-white font-bold shadow-lg shadow-purple-500/20 active:scale-98 hover:shadow-xl hover:shadow-purple-500/30 transition-all text-sm flex items-center justify-center gap-2"
+            >
+              <span>🔑</span>
+              <span>Unlock App</span>
+            </button>
+
+            <button
+              onClick={handleLockSignOut}
+              className="text-xs font-semibold text-slate-400 hover:text-rose-400 active:scale-95 transition-all mt-2"
+            >
+              Log Out / Fallback to Password
+            </button>
+          </div>
+        </div>
       )}
     </MobileShell>
   );
