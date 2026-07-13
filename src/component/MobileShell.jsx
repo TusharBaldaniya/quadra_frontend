@@ -22,13 +22,24 @@ export default function MobileShell({
 }) {
   const [isScrolled, setIsScrolled] = useState(false);
   const isDark = theme === 'dark';
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 15);
     };
+    const handleOnlineStatus = () => setIsOnline(true);
+    const handleOfflineStatus = () => setIsOnline(false);
+
     window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
+    window.addEventListener("online", handleOnlineStatus);
+    window.addEventListener("offline", handleOfflineStatus);
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("online", handleOnlineStatus);
+      window.removeEventListener("offline", handleOfflineStatus);
+    };
   }, []);
 
   return (
@@ -125,6 +136,14 @@ export default function MobileShell({
                     Install
                   </button>
                 )}
+              </div>
+            )}
+
+            {/* Offline indicator */}
+            {!isOnline && (
+              <div className={`flex items-center gap-1 rounded-full font-bold border shadow-xs animate-pulse select-none transition-all px-3 py-1 text-xs bg-red-500/10 text-red-500 dark:text-red-400 border-red-500/20`}>
+                <span className="w-1.5 h-1.5 rounded-full bg-red-500 dark:bg-red-400 animate-ping mr-0.5" />
+                <span>Offline</span>
               </div>
             )}
 

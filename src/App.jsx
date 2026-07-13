@@ -10,7 +10,7 @@ import MobileShell from "./component/MobileShell";
 import CalendarView from "./component/CalendarView";
 import SearchModal from "./component/SearchModal";
 import Snackbar from "./component/Snackbar";
-import { cacheTasks, getCachedTasks, enqueueMutation, flushQueue, onOnline } from "./services/offline";
+import { cacheTasks, getCachedTasks, enqueueMutation, flushQueue } from "./services/offline";
 import AuthPage from "./component/AuthPage";
 import { FiLogOut } from "react-icons/fi";
 import FocusMode from "./features/focus/FocusMode";
@@ -359,7 +359,6 @@ export default function App() {
 
         // Try to flush any queued mutations
         await flushQueue(api);
-        onOnline(() => flushQueue(api));
 
         const list = await api.getTasks();
         const mapped = { q1: [], q2: [], q3: [], q4: [] };
@@ -390,9 +389,68 @@ export default function App() {
         setTasks(mapped);
         cacheTasks(mapped);
       } catch (e) {
-        addAlert(`❌ Failed to load tasks: ${e.message}`, 'error');
+        if (!navigator.onLine) {
+          addAlert('📶 Running in Offline Mode — tasks loaded from cache.', 'info');
+        } else {
+          addAlert(`❌ Failed to load tasks: ${e.message}`, 'error');
+        }
       }
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  // Handle auto-syncing queue and refreshing tasks/habits when network status returns online
+  useEffect(() => {
+    if (!user) return;
+
+    const handleSyncOnOnline = async () => {
+      try {
+        addAlert('📶 Reconnecting... syncing your offline actions.', 'info');
+        await flushQueue(api);
+        
+        // Refresh tasks
+        const list = await api.getTasks();
+        const mapped = { q1: [], q2: [], q3: [], q4: [] };
+        for (const t of list) {
+          const q = ["q1", "q2", "q3", "q4"].includes(t.quadrant) ? t.quadrant : "q2";
+          mapped[q] = [
+            ...mapped[q],
+            {
+              id: t.id,
+              title: t.title,
+              description: t.description,
+              priority: t.priority,
+              due: t.dueDate ? new Date(t.dueDate) : undefined,
+              tags: t.tags || [],
+              estimated: t.estimatedTime,
+              dependencies: t.dependencyIds || [],
+              createdAt: t.createdAt ? new Date(t.createdAt) : undefined,
+              status: t.status,
+              completedAt: t.completedAt ? new Date(t.completedAt) : undefined,
+              projectName: t.projectName,
+              energyLevel: t.energyLevel,
+              context: t.context,
+              aiConfidence: t.aiConfidence,
+              postponedCount: t.postponedCount || 0,
+            },
+          ];
+        }
+        setTasks(mapped);
+        cacheTasks(mapped);
+
+        // Refresh habits
+        const habitsList = await api.getHabits();
+        setHabits(habitsList || []);
+        localStorage.setItem('quadra_cache_habits', JSON.stringify(habitsList || []));
+        
+        addAlert('⚡ Back online! Synced offline actions and updated database.', 'success');
+      } catch (err) {
+        console.error("Failed to automatically sync online queue:", err);
+      }
+    };
+
+    window.addEventListener('online', handleSyncOnOnline);
+    return () => window.removeEventListener('online', handleSyncOnOnline);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
