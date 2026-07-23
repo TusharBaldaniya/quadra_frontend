@@ -14,6 +14,7 @@ import { cacheTasks, getCachedTasks, enqueueMutation, flushQueue } from "./servi
 import AuthPage from "./component/AuthPage";
 import { FiLogOut } from "react-icons/fi";
 import FocusMode from "./features/focus/FocusMode";
+import OnboardingTour from "./component/OnboardingTour";
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -98,9 +99,10 @@ export default function App() {
   const [showInstallInstructions, setShowInstallInstructions] = useState(false);
   const [alerts, setAlerts] = useState([]);
   
-  // Biometrics Lock States
+  // Biometrics Lock & Tour States
   const [biometricsEnabled, setBiometricsEnabled] = useState(() => localStorage.getItem('quadra_biometrics_setup') === 'true');
   const [showBiometricLock, setShowBiometricLock] = useState(() => localStorage.getItem('quadra_biometrics_setup') === 'true' && localStorage.getItem('quadra_auth_token') !== null);
+  const [showTour, setShowTour] = useState(() => !localStorage.getItem('quadra_tour_completed'));
 
   // Core app state (declared early so effects can reference them)
   const [tasks, setTasks] = useState({ q1: [], q2: [], q3: [], q4: [] });
@@ -808,14 +810,25 @@ export default function App() {
   };
 
   const saveEditedTask = async (updatedTask, newQuadrant) => {
-    const targetQuadrant = ["q1", "q2", "q3", "q4"].includes(newQuadrant) ? newQuadrant : editQuadrant || "q2";
+    // Determine target quadrant
+    let targetQuadrant = ["q1", "q2", "q3", "q4"].includes(newQuadrant) ? newQuadrant : editQuadrant;
+    if (!targetQuadrant) {
+      for (const q of ["q1", "q2", "q3", "q4"]) {
+        if ((tasks[q] || []).some(t => t.id === updatedTask.id)) {
+          targetQuadrant = q;
+          break;
+        }
+      }
+    }
+    targetQuadrant = targetQuadrant || "q2";
+
     try {
       const payload = {
         title: updatedTask.title,
         description: updatedTask.description,
         priority: updatedTask.priority,
         quadrant: targetQuadrant,
-        dueDate: updatedTask.due ? new Date(updatedTask.due).toISOString() : undefined,
+        dueDate: updatedTask.due ? new Date(updatedTask.due).toISOString() : (updatedTask.due === null ? null : undefined),
         estimatedTime: updatedTask.estimated ?? undefined,
         tags: Array.isArray(updatedTask.tags) ? updatedTask.tags : [],
         projectName: updatedTask.projectName,
@@ -824,27 +837,41 @@ export default function App() {
         aiConfidence: updatedTask.aiConfidence,
       };
       const saved = await api.updateTask(updatedTask.id, payload);
+
       setTasks((prev) => {
         const next = { ...prev };
-        const fromQ = editQuadrant;
-        if (!fromQ || !next[fromQ]) return prev;
-        const idx = next[fromQ].findIndex((t) => t.id === updatedTask.id);
-        if (idx === -1) return prev;
-        const old = next[fromQ][idx];
+        let fromQ = editQuadrant;
+        if (!fromQ || !next[fromQ]?.some((t) => t.id === updatedTask.id)) {
+          fromQ = ["q1", "q2", "q3", "q4"].find((q) => (next[q] || []).some((t) => t.id === updatedTask.id));
+        }
+
         const merged = {
-          ...old,
-          title: saved.title,
-          description: saved.description,
-          priority: saved.priority,
-          due: saved.dueDate ? new Date(saved.dueDate) : undefined,
-          tags: saved.tags || [],
-          estimated: saved.estimatedTime,
-          projectName: saved.projectName,
-          energyLevel: saved.energyLevel,
-          context: saved.context,
-          aiConfidence: saved.aiConfidence,
-          postponedCount: saved.postponedCount || 0,
+          ...(saved || updatedTask),
+          id: updatedTask.id,
+          title: saved?.title || updatedTask.title,
+          description: saved?.description || updatedTask.description,
+          priority: saved?.priority || updatedTask.priority,
+          due: updatedTask.due === null ? undefined : (saved?.dueDate ? new Date(saved.dueDate) : (updatedTask.due ? new Date(updatedTask.due) : undefined)),
+          tags: saved?.tags || updatedTask.tags || [],
+          estimated: saved?.estimatedTime ?? updatedTask.estimated,
+          projectName: saved?.projectName || updatedTask.projectName,
+          energyLevel: saved?.energyLevel || updatedTask.energyLevel,
+          context: saved?.context || updatedTask.context,
+          aiConfidence: saved?.aiConfidence || updatedTask.aiConfidence,
+          postponedCount: saved?.postponedCount || 0,
         };
+
+        if (!fromQ) {
+          next[targetQuadrant] = [...(next[targetQuadrant] || []), merged];
+          return next;
+        }
+
+        const idx = next[fromQ].findIndex((t) => t.id === updatedTask.id);
+        if (idx === -1) {
+          next[targetQuadrant] = [...(next[targetQuadrant] || []), merged];
+          return next;
+        }
+
         if (targetQuadrant === fromQ) {
           const arr = [...next[fromQ]];
           arr[idx] = merged;
@@ -859,9 +886,10 @@ export default function App() {
         }
         return next;
       });
-      cacheTasks((prev => prev));
 
-      // Best-effort: add dependencies titles as FS links to this task (no removal logic yet)
+      cacheTasks(tasks);
+
+      // Best-effort: add dependencies titles as FS links to this task
       if (Array.isArray(updatedTask.dependencies) && updatedTask.dependencies.length > 0) {
         const titleToId = Object.values(tasks)
           .flat()
@@ -888,24 +916,24 @@ export default function App() {
       // Optimistic local update and queue for sync
       setTasks((prev) => {
         const next = { ...prev };
-        const fromQ = editQuadrant;
-        if (!fromQ || !next[fromQ]) return prev;
+        let fromQ = editQuadrant;
+        if (!fromQ || !next[fromQ]?.some((t) => t.id === updatedTask.id)) {
+          fromQ = ["q1", "q2", "q3", "q4"].find((q) => (next[q] || []).some((t) => t.id === updatedTask.id));
+        }
+
+        const merged = {
+          ...updatedTask,
+          due: updatedTask.due === null ? undefined : (updatedTask.due ? new Date(updatedTask.due) : undefined),
+        };
+
+        if (!fromQ) {
+          next[targetQuadrant] = [...(next[targetQuadrant] || []), merged];
+          return next;
+        }
+
         const idx = next[fromQ].findIndex((t) => t.id === updatedTask.id);
         if (idx === -1) return prev;
-        const old = next[fromQ][idx];
-        const merged = {
-          ...old,
-          title: updatedTask.title,
-          description: updatedTask.description,
-          priority: updatedTask.priority,
-          due: updatedTask.due ? new Date(updatedTask.due) : undefined,
-          tags: Array.isArray(updatedTask.tags) ? updatedTask.tags : [],
-          estimated: updatedTask.estimated ?? old.estimated,
-          projectName: updatedTask.projectName,
-          energyLevel: updatedTask.energyLevel,
-          context: updatedTask.context,
-          aiConfidence: updatedTask.aiConfidence,
-        };
+
         if (targetQuadrant === fromQ) {
           const arr = [...next[fromQ]];
           arr[idx] = merged;
@@ -920,13 +948,14 @@ export default function App() {
         }
         return next;
       });
+
       enqueueMutation({
         type: 'update', id: updatedTask.id, data: {
           title: updatedTask.title,
           description: updatedTask.description,
           priority: updatedTask.priority,
           quadrant: targetQuadrant,
-          dueDate: updatedTask.due ? new Date(updatedTask.due).toISOString() : undefined,
+          dueDate: updatedTask.due ? new Date(updatedTask.due).toISOString() : (updatedTask.due === null ? null : undefined),
           estimatedTime: updatedTask.estimated ?? undefined,
           tags: Array.isArray(updatedTask.tags) ? updatedTask.tags : [],
           projectName: updatedTask.projectName,
@@ -935,7 +964,7 @@ export default function App() {
           aiConfidence: updatedTask.aiConfidence,
         }
       });
-      cacheTasks((prev => prev));
+      cacheTasks(tasks);
       addAlert(`📶 Changes saved locally — will sync when online`, 'success');
     } finally {
       setShowEditModal(false);
@@ -1239,6 +1268,7 @@ export default function App() {
       streak={streak}
       onLogout={handleLogout}
       onSearchClick={() => setShowSearch(true)}
+      onOpenTour={() => setShowTour(true)}
     >
       <motion.div key={currentTab} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.15 }}>
         {currentTab === 'today' && (
@@ -1255,6 +1285,7 @@ export default function App() {
             onToggleHabit={handleToggleHabit}
             onDeleteHabit={handleDeleteHabit}
             theme={theme}
+            addAlert={addAlert}
           />
         )}
 
@@ -1295,6 +1326,7 @@ export default function App() {
             onUpdateTask={saveEditedTask}
             onStartFocus={(task) => setFocusTask(task)}
             theme={theme}
+            addAlert={addAlert}
           />
         )}
 
@@ -1625,6 +1657,21 @@ export default function App() {
               </div>
             </div>
 
+            {/* Feature Tour Guide card */}
+            <div className="p-4 rounded-2xl border border-brand-primary/30 bg-brand-primary/5 shadow-sm transition-colors flex items-center justify-between">
+              <div>
+                <h3 className="font-bold text-xs text-text-primary">🚀 Product Feature Tour</h3>
+                <p className="text-[10px] text-text-muted mt-0.5">Explore how to use Quadra's Matrix, Focus Timeline & AI tools.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowTour(true)}
+                className="px-3.5 py-1.5 rounded-xl bg-brand-primary text-white text-xs font-extrabold shadow-sm hover:opacity-90 active:scale-95 transition-all flex-shrink-0 ml-2"
+              >
+                Restart Tour
+              </button>
+            </div>
+
             {/* App Info card */}
             <div className="p-4 rounded-2xl border border-border-subtle bg-background-surface shadow-sm transition-colors">
               <h3 className="font-semibold text-sm mb-1.5">App Info</h3>
@@ -1847,6 +1894,13 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* Product Feature Onboarding Tour */}
+      <OnboardingTour
+        isOpen={showTour}
+        onClose={() => setShowTour(false)}
+        theme={theme}
+      />
     </MobileShell>
   );
 }

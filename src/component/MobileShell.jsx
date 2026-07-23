@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { FiPlus, FiSearch } from "react-icons/fi";
+import { FiPlus, FiSearch, FiHelpCircle } from "react-icons/fi";
 import BottomNav from "./bottomNav";
 
 export default function MobileShell({
@@ -18,7 +18,8 @@ export default function MobileShell({
   onMobileInstall,
   user,
   streak,
-  onSearchClick
+  onSearchClick,
+  onOpenTour
 }) {
   const [isScrolled, setIsScrolled] = useState(false);
   const isDark = theme === 'dark';
@@ -91,11 +92,26 @@ export default function MobileShell({
           </div>
 
           {/* Right side header actions */}
-          <div className="flex items-center gap-2.5 flex-shrink-0 ml-2">
+          <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+            {/* Tour Guide Icon */}
+            {onOpenTour && (
+              <button
+                onClick={onOpenTour}
+                className={`rounded-full flex items-center justify-center transition-all w-8 h-8 ${
+                  isDark 
+                    ? 'hover:bg-white/15 text-text-muted hover:text-white' 
+                    : 'hover:bg-slate-100 text-slate-500 hover:text-slate-900'
+                }`}
+                title="Product Tour & Feature Guide"
+              >
+                <FiHelpCircle size={17} />
+              </button>
+            )}
+
             {/* Universal Search Icon */}
             <button
               onClick={onSearchClick}
-              className={`rounded-full flex items-center justify-center transition-all w-9 h-9 ${
+              className={`rounded-full flex items-center justify-center transition-all w-8 h-8 ${
                 isDark 
                   ? 'hover:bg-white/15 text-text-muted hover:text-white' 
                   : 'hover:bg-slate-100 text-slate-500 hover:text-slate-900'

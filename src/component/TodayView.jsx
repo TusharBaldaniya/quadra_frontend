@@ -12,7 +12,8 @@ export default function TodayView({
   onCreateHabit,
   onToggleHabit,
   onDeleteHabit,
-  theme = 'dark' 
+  theme = 'dark',
+  addAlert
 }) {
   const isDark = theme === 'dark';
   const [newHabitTitle, setNewHabitTitle] = useState("");
@@ -80,11 +81,13 @@ export default function TodayView({
   // Next hero task (first displayed task)
   const heroTask = displayedTasks.length > 0 ? displayedTasks[0] : null;
 
-  // Stress and advice calculations
-  const stressLevel = q1Tasks.length > 3 ? "High" : "Optimal";
-  const estimatedSuccess = Math.max(50, 100 - (q1Tasks.length * 8) - (q2Tasks.length * 3));
+  // Estimate success score
+  const estimatedSuccess = Math.min(98, Math.max(45, 60 + (completedToday * 10) - (q1Tasks.length * 5)));
 
-  // Ignored Q2 tasks from yesterday or earlier
+  // Stress warning logic
+  const stressLevel = q1Tasks.length >= 3 ? "High" : q1Tasks.length >= 1 ? "Moderate" : "Low";
+
+  // Postponed Q2 tasks detector
   const isOverdue = (date) => {
     if (!date) return false;
     const d = new Date(date);
@@ -96,14 +99,18 @@ export default function TodayView({
   const ignoredQ2Tasks = q2Tasks.filter(t => t.due && isOverdue(t.due));
 
   const handleRescheduleQ2 = async () => {
-    if (onUpdateTask) {
+    if (onUpdateTask && ignoredQ2Tasks.length > 0) {
       const todayAtNine = new Date();
       todayAtNine.setHours(9, 0, 0, 0);
+      const count = ignoredQ2Tasks.length;
       for (const t of ignoredQ2Tasks) {
         await onUpdateTask({
           ...t,
           due: todayAtNine.toISOString()
         }, 'q2');
+      }
+      if (addAlert) {
+        addAlert(`📅 Rescheduled ${count} overdue Q2 task${count > 1 ? 's' : ''} to today at 9:00 AM!`, 'success');
       }
     }
   };
