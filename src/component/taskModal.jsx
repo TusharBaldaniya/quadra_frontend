@@ -1,7 +1,9 @@
 import React, { useState } from "react";
 import { api } from "../services/api";
 import { motion, AnimatePresence } from "framer-motion";
-import { FiCheck, FiX, FiZap, FiHelpCircle, FiRepeat, FiSettings } from "react-icons/fi";
+import { FiCheck, FiX, FiZap, FiHelpCircle, FiRepeat, FiSettings, FiTag, FiGrid, FiClock } from "react-icons/fi";
+import { parseNaturalLanguageTask } from "../utils/nlpParser";
+import { playTaskCompleteSound } from "../utils/audioHaptics";
 
 
 
@@ -183,21 +185,38 @@ export default function TaskModal({ addTask, onClose, tasks = {} }) {
     }
   };
 
+  const nlpParsed = parseNaturalLanguageTask(title);
+
+  const handleApplyNlpShortcuts = () => {
+    if (nlpParsed.title) setTitle(nlpParsed.title);
+    if (nlpParsed.quadrant) setQuadrantChoice(nlpParsed.quadrant);
+    if (nlpParsed.tags.length > 0) setTags(nlpParsed.tags.join(', '));
+    if (nlpParsed.due) {
+      try {
+        setDue(new Date(nlpParsed.due).toISOString().slice(0, 16));
+      } catch (e) {}
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!title.trim()) return;
     
     setIsSubmitting(true);
-    
+    playTaskCompleteSound();
+
+    const finalTitle = nlpParsed.title || title.trim();
+    const finalQuad = nlpParsed.quadrant || quadrantChoice;
+    const parsedTagList = tags.split(',').map(t => t.trim()).filter(Boolean);
+    const mergedTags = Array.from(new Set([...nlpParsed.tags, ...parsedTagList]));
+    const finalDue = nlpParsed.due ? new Date(nlpParsed.due) : (due ? new Date(due) : undefined);
+
     const task = {
-      title: title.trim(),
+      title: finalTitle,
       description: description.trim() || undefined,
       priority,
-      due: due ? new Date(due) : undefined,
-      tags: tags
-        .split(',')
-        .map(t => t.trim())
-        .filter(Boolean),
+      due: finalDue,
+      tags: mergedTags,
       estimated: estimated ? Number(estimated) : undefined,
       dependencies: dependencies
         .split(',')
@@ -213,7 +232,7 @@ export default function TaskModal({ addTask, onClose, tasks = {} }) {
       aiConfidence,
     };
 
-    addTask(task, quadrantChoice);
+    addTask(task, finalQuad);
     
     // Reset fields
     setTitle("");
@@ -450,12 +469,48 @@ export default function TaskModal({ addTask, onClose, tasks = {} }) {
                 </div>
                 <input
                   type="text"
-                  placeholder="What needs to be done?"
+                  placeholder="e.g. Finish report tomorrow at 3pm #work !q1"
                   className="w-full p-2.5 rounded-2xl border border-border-subtle bg-background-elevated text-text-primary placeholder:text-text-muted/50 focus:border-brand-primary outline-none text-sm font-medium"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   required
                 />
+
+                {/* Live Natural Language Parsing Badges */}
+                {(nlpParsed.quadrant || nlpParsed.tags.length > 0 || nlpParsed.timeStr) && (
+                  <div className="mt-2 p-2 rounded-xl bg-brand-primary/10 border border-brand-primary/20 text-[10px] space-y-1 animate-fadeIn">
+                    <div className="flex items-center justify-between font-bold text-brand-primary">
+                      <span>⚡ Natural Language Extracted:</span>
+                      <button 
+                        type="button" 
+                        onClick={handleApplyNlpShortcuts}
+                        className="text-[9px] underline hover:opacity-80"
+                      >
+                        Fill Fields
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-1.5 font-bold">
+                      {nlpParsed.quadrant && (
+                        <span className="px-2 py-0.5 rounded-md bg-rose-500/20 text-rose-400 flex items-center gap-1">
+                          <FiGrid size={10} />
+                          <span>Quadrant: {nlpParsed.quadrant.toUpperCase()}</span>
+                        </span>
+                      )}
+                      {nlpParsed.tags.map((tg, i) => (
+                        <span key={i} className="px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-400 flex items-center gap-1">
+                          <FiTag size={10} />
+                          <span>#{tg}</span>
+                        </span>
+                      ))}
+                      {nlpParsed.timeStr && (
+                        <span className="px-2 py-0.5 rounded-md bg-purple-500/20 text-purple-400 flex items-center gap-1">
+                          <FiClock size={10} />
+                          <span>{nlpParsed.timeStr}</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* AI Coaching Inline Suggestion Drawer */}

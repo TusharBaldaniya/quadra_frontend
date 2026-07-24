@@ -13,7 +13,8 @@ export default function TodayView({
   onToggleHabit,
   onDeleteHabit,
   theme = 'dark',
-  addAlert
+  addAlert,
+  onOpenShutdown
 }) {
   const isDark = theme === 'dark';
   const [newHabitTitle, setNewHabitTitle] = useState("");
@@ -130,7 +131,7 @@ export default function TodayView({
   return (
     <div className={`space-y-6 pb-24 ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
       {/* Dynamic Coach Greeting */}
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center gap-2">
         <div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight font-display">
             {getGreeting()}
@@ -140,6 +141,17 @@ export default function TodayView({
             <span>Success Estimate today: <strong className="text-brand-primary">{estimatedSuccess}%</strong></span>
           </p>
         </div>
+
+        {onOpenShutdown && (
+          <button
+            onClick={onOpenShutdown}
+            className="px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 text-xs font-extrabold border border-amber-500/30 flex items-center gap-1.5 active:scale-95 transition-all flex-shrink-0 shadow-xs"
+            title="Start Workplace Shutdown Ritual"
+          >
+            <span>🌇</span>
+            <span className="hidden sm:inline">Shutdown</span>
+          </button>
+        )}
       </div>
 
       {/* Morning Briefing Rescheduler Card */}

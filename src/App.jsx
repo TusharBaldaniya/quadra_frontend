@@ -15,6 +15,8 @@ import AuthPage from "./component/AuthPage";
 import { FiLogOut } from "react-icons/fi";
 import FocusMode from "./features/focus/FocusMode";
 import OnboardingTour from "./component/OnboardingTour";
+import ShutdownModal from "./component/ShutdownModal";
+import { playTaskCompleteSound, playLevelUpSound, playSnapSound } from "./utils/audioHaptics";
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -99,10 +101,21 @@ export default function App() {
   const [showInstallInstructions, setShowInstallInstructions] = useState(false);
   const [alerts, setAlerts] = useState([]);
   
-  // Biometrics Lock & Tour States
+  // Biometrics Lock, Tour & Shutdown States
   const [biometricsEnabled, setBiometricsEnabled] = useState(() => localStorage.getItem('quadra_biometrics_setup') === 'true');
   const [showBiometricLock, setShowBiometricLock] = useState(() => localStorage.getItem('quadra_biometrics_setup') === 'true' && localStorage.getItem('quadra_auth_token') !== null);
   const [showTour, setShowTour] = useState(() => !localStorage.getItem('quadra_tour_completed'));
+  const [showShutdown, setShowShutdown] = useState(false);
+
+  // Auto-prompt Workplace Shutdown Ritual at/after 6:00 PM
+  useEffect(() => {
+    const hour = new Date().getHours();
+    const todayStr = new Date().toLocaleDateString('en-CA');
+    const hasDoneShutdown = localStorage.getItem(`quadra_shutdown_${todayStr}`);
+    if (hour >= 18 && !hasDoneShutdown && user) {
+      setShowShutdown(true);
+    }
+  }, [user]);
 
   // Core app state (declared early so effects can reference them)
   const [tasks, setTasks] = useState({ q1: [], q2: [], q3: [], q4: [] });
@@ -175,6 +188,10 @@ export default function App() {
     }
   }, [user, currentTab]);
 
+  const [pushPermission, setPushPermission] = useState(() => 
+    typeof Notification !== 'undefined' ? Notification.permission : 'default'
+  );
+
   // Push Notifications Setup
   const setupPushNotifications = async () => {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
@@ -184,6 +201,7 @@ export default function App() {
     try {
       const registration = await navigator.serviceWorker.ready;
       const permission = await Notification.requestPermission();
+      setPushPermission(permission);
       if (permission !== 'granted') {
         console.log('Push notification permission denied.');
         return;
@@ -199,6 +217,33 @@ export default function App() {
       console.log('Successfully registered for PWA push notifications.');
     } catch (e) {
       console.error('Failed to configure push notifications:', e);
+    }
+  };
+
+  const handleTestNotification = async () => {
+    try {
+      if (pushPermission !== 'granted') {
+        const res = await Notification.requestPermission();
+        setPushPermission(res);
+        if (res !== 'granted') {
+          addAlert('Push permission is denied in your browser settings.', 'warning');
+          return;
+        }
+      }
+      await setupPushNotifications();
+      await api.sendTestNotification();
+      addAlert('🧪 Sent test push notification!', 'success');
+    } catch (err) {
+      addAlert(`Failed to send test push: ${err.message}`, 'error');
+    }
+  };
+
+  const handleTriggerQuote = async () => {
+    try {
+      await api.triggerMotivationalQuote();
+      addAlert('💡 Sent daily motivational hype quote push!', 'success');
+    } catch (err) {
+      addAlert(`Failed to trigger quote: ${err.message}`, 'error');
     }
   };
 
@@ -219,6 +264,35 @@ export default function App() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
+
+  // In-App Local Scheduled Slot & Due Date Reminders
+  useEffect(() => {
+    if (!tasks) return;
+    const interval = setInterval(() => {
+      const now = new Date();
+      const allActive = Object.values(tasks).flat().filter(t => t.status !== 'completed' && t.due);
+      
+      allActive.forEach(t => {
+        const dueDate = new Date(t.due);
+        const diffMs = dueDate.getTime() - now.getTime();
+        const diffMins = Math.floor(diffMs / (1000 * 60));
+        
+        // 15-minute slot warning
+        if (diffMins > 14 && diffMins <= 15 && !t._notified15m) {
+          t._notified15m = true;
+          addAlert(`⏰ Scheduled Focus Alert: "${t.title}" starts in 15 minutes!`, 'info');
+          if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+            new Notification('⏰ Focus Session Starting Soon', {
+              body: `"${t.title}" is scheduled at ${dueDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.`,
+              icon: '/quadra-symbol-transparent.png'
+            });
+          }
+        }
+      });
+    }, 60000);
+
+    return () => clearInterval(interval);
+  }, [tasks]);
 
   const updateStreak = () => {
     const todayStr = new Date().toDateString();
@@ -260,6 +334,7 @@ export default function App() {
       }
       if (newLvl > currentLvl) {
         setLevel(newLvl);
+        playLevelUpSound();
         addAlert(`🎉 Level Up! You reached Level ${newLvl}!`, 'success');
       } else {
         addAlert(`✨ Earned +${amount} XP!`, 'info');
@@ -974,6 +1049,7 @@ export default function App() {
   };
 
   const handleMoveTask = async (task, fromQuadrant, toQuadrant, newIndex) => {
+    playSnapSound();
     // 1. Optimistic local update
     let movedTask = null;
     setTasks((prev) => {
@@ -1044,6 +1120,7 @@ export default function App() {
   };
 
   const handleComplete = (task, quadrant) => {
+    playTaskCompleteSound();
     // Commit any previous pending action immediately
     if (undoRef.current.commit) {
       try { undoRef.current.commit(); } catch { }
@@ -1286,6 +1363,7 @@ export default function App() {
             onDeleteHabit={handleDeleteHabit}
             theme={theme}
             addAlert={addAlert}
+            onOpenShutdown={() => setShowShutdown(true)}
           />
         )}
 
@@ -1613,6 +1691,63 @@ export default function App() {
               </div>
             </div>
 
+            {/* Notification Settings Panel */}
+            <div className="p-4 rounded-2xl border border-border-subtle bg-background-surface shadow-sm transition-colors space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-sm flex items-center gap-1.5">
+                  <span>🔔</span>
+                  <span>Smart Notifications & Reminders</span>
+                </h3>
+                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${
+                  pushPermission === 'granted'
+                    ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/30'
+                    : 'bg-amber-500/10 text-amber-500 border border-amber-500/30'
+                }`}>
+                  {pushPermission === 'granted' ? 'Enabled' : 'Disabled'}
+                </span>
+              </div>
+
+              <p className="text-[11px] text-text-muted leading-relaxed">
+                Receive auto motivation quotes ("Hurry up! 🔥"), scheduled focus slot alerts (15m before task starts), and due date reminders directly on your device.
+              </p>
+
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                {pushPermission !== 'granted' ? (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const res = await Notification.requestPermission();
+                      setPushPermission(res);
+                      if (res === 'granted') {
+                        await setupPushNotifications();
+                        addAlert('🔔 Notifications enabled successfully!', 'success');
+                      }
+                    }}
+                    className="px-4 py-2 rounded-xl bg-brand-primary text-white text-xs font-extrabold shadow-sm active:scale-95 transition-all"
+                  >
+                    Enable Push Notifications
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={handleTestNotification}
+                      className="px-3.5 py-1.5 rounded-xl bg-brand-primary/10 hover:bg-brand-primary/20 text-brand-primary text-xs font-extrabold border border-brand-primary/30 active:scale-95 transition-all"
+                    >
+                      🧪 Send Test Push
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleTriggerQuote}
+                      className="px-3.5 py-1.5 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-500 text-xs font-extrabold border border-purple-500/30 active:scale-95 transition-all"
+                    >
+                      💡 Trigger Motivation Hype
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+
             {/* Security Settings (Biometric Lock) */}
             <div className="p-4 rounded-2xl border border-border-subtle bg-background-surface shadow-sm transition-colors space-y-3">
               <h3 className="font-semibold text-sm">🛡️ Security</h3>
@@ -1900,6 +2035,18 @@ export default function App() {
         isOpen={showTour}
         onClose={() => setShowTour(false)}
         theme={theme}
+      />
+
+      {/* Workplace Shutdown Ritual Modal */}
+      <ShutdownModal
+        isOpen={showShutdown}
+        onClose={() => setShowShutdown(false)}
+        tasksByQuadrant={tasks}
+        onUpdateTask={saveEditedTask}
+        xp={xp}
+        streak={streak}
+        theme={theme}
+        addAlert={addAlert}
       />
     </MobileShell>
   );
